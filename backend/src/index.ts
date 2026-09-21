@@ -63,7 +63,11 @@ app.use(express.urlencoded({ extended: true }));
 // Đặt TRƯỚC rate limiter: health check của Render và job self-ping (jobs/selfPing.ts) gọi route này
 // định kỳ từ cùng một IP — bị tính vào giới hạn chung thì có lúc nhận 429, Render tưởng server chết
 // và khởi động lại liên tục. Route này không đọc DB, không có gì để lạm dụng.
-app.get('/health', (_req, res) => {
+app.get('/health', (req, res) => {
+  // TẠM THỜI — đo số lớp proxy thật trên Render để đặt đúng `trust proxy`. Gỡ ngay sau khi đo.
+  if (req.query.diag === '4c64ab29e0a1e5bf') {
+    console.log('[DIAG]', JSON.stringify({ xff: req.headers['x-forwarded-for'], cf: req.headers['cf-connecting-ip'], tci: req.headers['true-client-ip'], xri: req.headers['x-real-ip'], ip: req.ip, ips: req.ips, remote: req.socket.remoteAddress }));
+  }
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
