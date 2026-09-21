@@ -1,0 +1,131 @@
+/* =============================================
+   LOGIN
+   Trang đăng nhập
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   TRANG ĐĂNG NHẬP
+   ═══════════════════════════════════════════════════════════════════════════════
+   Trước đây toàn bộ trang này viết inline với bảng màu riêng (gradient tím
+   #667eea→#764ba2, chữ #1a1f36, viền #e2e6f3...) — không đụng token nào, nên vừa lệch
+   tông với phần còn lại của sản phẩm vừa không đổi được theo chế độ Tối. Đã đưa hết về
+   token dùng chung. */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(59, 130, 246, 0.18), transparent 70%),
+    var(--color-bg);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-size: var(--fs-xl);
+  box-shadow: var(--shadow-fab);
+}
+
+.login-title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: var(--lh-tight);
+  margin-bottom: 0.25rem;
+}
+
+.login-subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.login-field {
+  margin-bottom: 1rem;
+}
+
+.login-label {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Ô nhập liệu dùng chung ───────────────────────────────────────────────────
+   Trước đây mỗi form tự viết style riêng (viền 2px chỗ này, 1px chỗ kia, bo góc 8px/10px
+   lẫn lộn), lại thêm 2 ô dùng `.form-control` của Bootstrap nên nhìn khác hẳn các ô còn
+   lại. Gộp về một class duy nhất cho mọi form trong app. */
+.input-custom,
+.login-input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  font-size: var(--fs-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.login-input {
+  padding: 0.75rem 1rem;
+}
+
+.input-custom::placeholder,
+.login-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Viền đậm lên khi đang gõ — trước đây làm bằng sự kiện onFocus/onBlur trong JS,
+   nay để CSS lo, bớt logic thừa trong component. */
+.input-custom:focus,
+.login-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.input-custom:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.875rem;
+  font-size: var(--fs-base);
+}
+
+.login-hint {
+  text-align: center;
+  margin: 1.5rem 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}

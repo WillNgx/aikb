@@ -1,0 +1,207 @@
+/* =============================================
+   COMPONENTS
+   Callout, bảng tài liệu, badge trạng thái, badge vai trò, hiệu ứng nháy heading
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ─── Callouts (Success / Warning / Danger) ───────────────────── */
+.callout {
+  display: flex;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin: 1.25rem 0;
+  line-height: 1.6;
+}
+
+.callout-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callout-content {
+  flex: 1;
+  font-size: 0.925rem;
+}
+
+.callout-success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-left: 5px solid #10b981;
+  color: var(--color-text);
+}
+
+.callout-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 5px solid #f59e0b;
+  color: var(--color-text);
+}
+
+.callout-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left: 5px solid #ef4444;
+  color: var(--color-text);
+}
+
+/* ─── Document Tables ────────────────────────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.doc-table th {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.doc-table th:last-child {
+  border-right: none;
+}
+
+.doc-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.doc-table td:last-child {
+  border-right: none;
+}
+
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-table tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+[data-bs-theme="dark"] .doc-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ─── Badge trạng thái — hệ thống DUY NHẤT ─────────────────────────────────────
+   Trước đây tồn tại 3 hệ song song: `.badge-success/warning/neutral` (định nghĩa nhưng
+   không nơi nào dùng), `.status-badge-pill` (dùng 1 chỗ), và `.status-badge` — được dùng
+   ở AdminUsersPage + AdminSlangPage nhưng CHƯA TỪNG ĐƯỢC ĐỊNH NGHĨA, nên nhãn
+   "Hoạt động / Đã khoá" hiển thị thành chữ trơn không có nền. Gộp lại làm một.
+
+   Biến thể: .published (xanh, đang hoạt động/đã đăng) · .draft (vàng, bản nháp)
+             .unpublished (xám trung tính, đã khoá/ngưng dùng) */
+.status-badge,
+.status-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: var(--lh-normal);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.status-badge.published,
+.status-badge-pill.published {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-success);
+}
+
+.status-badge.draft,
+.status-badge-pill.draft {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning);
+}
+
+.status-badge.unpublished,
+.status-badge-pill.unpublished {
+  background: rgba(100, 116, 139, 0.16);
+  color: var(--color-text-muted);
+}
+
+/* Nhãn vai trò tài khoản — cùng hình dạng với badge trạng thái để giao diện nhất quán */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: var(--lh-normal);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.role-badge.admin {
+  background: rgba(99, 102, 241, 0.14);
+  color: var(--color-accent);
+}
+
+.role-badge.user {
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--color-primary);
+}
+
+/* ─── Heading Highlight Flash ────────────────────────────────── */
+.heading-highlight-flash {
+  animation: headingFlash 1.8s ease-in-out;
+}
+
+@keyframes headingFlash {
+  0% {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    padding-left: 8px;
+  }
+  100% {
+    background: transparent;
+    border-radius: 0;
+    padding-left: 0;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SPINNER TẢI DỮ LIỆU
+   ═══════════════════════════════════════════════════════════════════════════════
+   Class .spinner-custom xuất hiện ở 10 file (App, Đăng nhập, Chat, Tìm kiếm, Wiki và 5 trang
+   Admin) nhưng trước đây KHÔNG được khai báo ở bất kỳ đâu — mọi trạng thái "đang tải" của
+   ứng dụng thực chất chỉ là một ô trống vô hình.
+
+   Kích thước mặc định 24px; các trang truyền inline width/height riêng (thường 32px) sẽ đè lên
+   giá trị này, nên không phải sửa file .tsx nào.
+
+   KHÔNG cần tự tắt animation cho prefers-reduced-motion: khối selector "*" dùng !important trong
+   tokens.css đã bao phủ sẵn. */
+.spinner-custom {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinnerRotate 0.7s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}

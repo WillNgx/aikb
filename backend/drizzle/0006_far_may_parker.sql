@@ -1,0 +1,1 @@
+ALTER TABLE "content_chunks" ADD COLUMN "heading_index" integer;

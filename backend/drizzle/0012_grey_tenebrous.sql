@@ -1,0 +1,13 @@
+-- ⚠️ MIGRATION RỖNG CÓ CHỦ Ý — KHÔNG ĐƯỢC KHÔI PHỤC NỘI DUNG DRIZZLE TỰ SINH.
+--
+-- drizzle-kit sinh ra `DROP TABLE ... CASCADE` cho 6 bảng nội dung ở file này, nhưng đó KHÔNG
+-- phải điều chúng ta muốn. Bối cảnh: 6 bảng nội dung được chuyển từ schema `public` sang schema
+-- riêng của từng KB (`kb_vi`). drizzle-kit không phân biệt được "chuyển schema" với
+-- "xoá rồi tạo lại", nên nó viết ra DROP + CREATE — chạy vào là mất sạch 264 node, 1.043 chunk
+-- và 42 khuyến mãi.
+--
+-- Việc chuyển schema THẬT nằm ở migration kế tiếp (0013), dùng `ALTER TABLE ... SET SCHEMA`
+-- nên không chép một byte dữ liệu nào.
+--
+-- File này chỉ tồn tại để chuỗi snapshot của drizzle-kit liền mạch (0011 -> 0012 -> 0013).
+SELECT 1;

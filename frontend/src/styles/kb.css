@@ -1,0 +1,76 @@
+/* =============================================
+   Chuyển Knowledge Base (ngôn ngữ)
+
+   Chỉ hiện khi hệ thống có từ 2 KB trở lên — xem components/KbSwitcher.tsx.
+   Màu/cỡ chữ lấy từ tokens.css, không khai báo màu mới.
+   ============================================= */
+
+.kb-picker {
+  margin: 0.75rem 0.875rem 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 0.625rem;
+}
+
+.kb-picker-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.kb-picker-select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.44rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.kb-picker-select:hover {
+  border-color: var(--color-primary);
+}
+
+/* Nhắc khi đang làm việc ngoài KB mặc định của tài khoản.
+   CỐ Ý chỉ cảnh báo, không chặn: mọi tài khoản đều đọc và ghi được trên mọi KB. */
+.kb-context-banner {
+  margin-bottom: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.625rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--color-text);
+  border-left: 3px solid var(--color-warning);
+}
+
+/* Ô chọn KB cho từng tài khoản Telegram (trang Tài khoản Telegram) */
+.kb-inline-select {
+  padding: 0.25rem 0.44rem;
+  border-radius: 0.44rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  max-width: 12rem;
+  transition: var(--transition);
+}
+
+.kb-inline-select:hover {
+  border-color: var(--color-primary);
+}
+
+.kb-inline-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

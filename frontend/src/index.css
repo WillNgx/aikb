@@ -1,0 +1,30 @@
+/* =============================================
+   KB AI Chat — Design System
+
+   File này CHỈ là danh mục nạp. Toàn bộ style nằm trong ./styles/.
+   THỨ TỰ DƯỚI ĐÂY LÀ MỘT PHẦN CỦA THIẾT KẾ: file được tách theo dải dòng liên tiếp của
+   bản gốc, nhiều rule dựa vào việc nằm sau rule khác để đè lên. Đảo thứ tự = đổi giao diện.
+   ============================================= */
+
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+/* Token phải nạp trước mọi rule dùng var() */
+@import "./styles/tokens.css";
+
+@import "./styles/base.css";
+@import "./styles/layout.css";
+@import "./styles/chat.css";
+@import "./styles/components.css";
+@import "./styles/wiki.css";
+@import "./styles/pages.css";
+@import "./styles/tree-explorer.css";
+@import "./styles/cards-buttons.css";
+@import "./styles/editor.css";
+@import "./styles/login.css";
+@import "./styles/admin.css";
+@import "./styles/promotions.css";
+@import "./styles/kb.css";
+
+/* Nạp CUỐI CÙNG — vòng focus phải thắng mọi rule `outline: none` rải rác phía trên */
+@import "./styles/focus.css";

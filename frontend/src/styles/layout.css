@@ -1,0 +1,563 @@
+/* =============================================
+   LAYOUT
+   Khung app, sidebar, thương hiệu, cây thư mục, footer người dùng, hiệu ứng kéo-thả
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ─── Layout Shell ───────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 320px;
+  min-height: 100vh;
+  height: 100vh;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  transition: transform var(--transition);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.sidebar-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem 1.5rem;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.sidebar-scrollable-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.doc-tree-body-canva.scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.doc-tree-body-canva.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Drag and Drop (DnD) Visual Styles ─────────────────────── */
+.tree-item-canva.is-dragging-node {
+  opacity: 0.4;
+  border: 1px dashed var(--color-primary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.tree-item-canva.drag-over-target {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border: 1.5px dashed var(--color-primary) !important;
+  transform: scale(1.02);
+  transition: all 0.15s ease;
+}
+
+/* Đường kẻ chèn vị trí khi thả vào nửa trên/dưới của 1 mục cùng cấp cha (đổi thứ tự) */
+.tree-item-canva.drop-indicator-before::before,
+.tree-item-canva.drop-indicator-after::after {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  right: 0.25rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-primary);
+}
+
+.tree-item-canva.drop-indicator-before::before {
+  top: -1px;
+}
+
+.tree-item-canva.drop-indicator-after::after {
+  bottom: -1px;
+}
+
+.tree-root-drop-zone {
+  /* Overlay tuyệt đối trong .doc-tree-body-canva (position:relative) — không đẩy các
+     hàng bên dưới dịch chuyển vị trí khi bắt đầu kéo (tránh lệch toạ độ đang nhắm tới). */
+  position: absolute;
+  top: 0.5rem;
+  left: 0.35rem;
+  right: 0.35rem;
+  z-index: 20;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-surface);
+  border: 1.5px dashed rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: fadeInZone 0.2s ease-in-out;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.tree-root-drop-zone:hover,
+.tree-root-drop-zone.active {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.root-zone-icon {
+  font-size: 1rem;
+}
+
+.root-zone-text {
+  flex: 1;
+}
+
+@keyframes fadeInZone {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-content {
+  margin-left: 320px;
+  flex: 1;
+  padding: 1.25rem 2rem;
+  max-width: calc(100vw - 320px);
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.content-inner-wrapper {
+  max-width: 1660px;
+  margin: 0 auto;
+  width: 100%;
+  /* Chừa chỗ cho nút nổi "Hỏi AI" (position: fixed, bottom 2rem). Không có khoảng này thì
+     nội dung cuối trang — thường là link/nút hành động — bị nút che khuất, người dùng
+     không bấm được, thấy rõ nhất trên điện thoại. */
+  padding-bottom: 5.5rem;
+}
+
+/* ─── Brand & Header ─────────────────────────────────────────── */
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.theme-toggle-btn {
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-accent)
+  );
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.brand-text-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Sidebar Sections ───────────────────────────────────────── */
+.sidebar-section {
+  margin-top: 1rem;
+}
+
+.sidebar-section-header {
+  padding: 0.5rem 0.75rem 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title-link {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--color-text-muted-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: color var(--transition);
+}
+
+.section-title-link:hover {
+  color: var(--color-primary);
+}
+
+.section-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: inline-block;
+}
+
+.admin-section {
+  border-top: 1px dashed var(--color-border);
+  padding-top: 1rem;
+  margin-top: 1.25rem;
+}
+
+.admin-header {
+  padding-bottom: 0.5rem;
+}
+
+.admin-badge {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent-text);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.admin-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.nav-link-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+
+.nav-link-custom:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.nav-link-custom.active {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ─── Document Folder Tree Component ─────────────────────────── */
+.doc-tree-container {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.doc-tree-header {
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-3);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.doc-tree-title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+.doc-tree-count {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.doc-tree-scrollable {
+  max-height: 480px;
+  overflow-y: auto;
+  padding: 0.375rem 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--transition),
+    color var(--transition);
+  color: var(--color-text);
+}
+
+.tree-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.tree-arrow {
+  width: 14px;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  display: inline-flex;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform var(--transition);
+}
+
+.tree-arrow-spacer {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.tree-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-name {
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--color-text);
+}
+
+.tree-badge {
+  font-size: var(--fs-xs);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.tree-children {
+  padding-left: 0.75rem;
+  margin-left: 0.375rem;
+  border-left: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.subcategory-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.tree-item-article {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.tree-item-article.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.art-code {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+}
+
+.topics-branch {
+  border-left-color: rgba(59, 130, 246, 0.25);
+}
+
+.tree-item-topic {
+  padding: 0.25rem 0.375rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.tree-item-topic:hover {
+  color: var(--color-primary);
+}
+
+.topic-indicator {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.subtopics-branch {
+  border-left-color: rgba(99, 102, 241, 0.2);
+}
+
+.tree-item-subtopic {
+  padding: 0.2rem 0.375rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.tree-item-subtopic:hover {
+  color: var(--color-accent);
+}
+
+.subtopic-indicator {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-accent);
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ─── Sidebar User Footer ────────────────────────────────────── */
+.sidebar-user-footer {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: var(--color-surface);
+}
+
+.user-avatar-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.user-meta-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-email-text {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role-badge {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.role-dot.admin {
+  background: var(--color-accent);
+}
+.role-dot.user {
+  background: var(--color-success);
+}
+
+.user-action-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.footer-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: background var(--transition);
+}
+
+.footer-btn:hover {
+  background: var(--color-surface-2);
+}

@@ -1,0 +1,119 @@
+/* =============================================
+   Design Tokens — nguon duy nhat cho mau, co chu, bong do, chuyen dong
+   Doc file nay TRUOC khi them bat ky style nao.
+   Duoc import tu index.css, phai nap TRUOC moi rule khac.
+   ============================================= */
+
+/* ─── CSS Variables ──────────────────────────────────────────── */
+:root {
+  /* Màu thương hiệu DUY NHẤT của sản phẩm. Trước đây tồn tại 3 màu chủ đạo song song
+     (--bs-primary #4f6ef7, --color-primary #3b82f6, gradient tím ở trang Đăng nhập) khiến
+     login và app trông như 2 sản phẩm khác nhau. Đã thống nhất về #3b82f6. */
+  --bs-primary: #3b82f6;
+  --bs-primary-rgb: 59, 130, 246;
+  --bs-secondary: #7c8db0;
+  --bs-body-font-family:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --bs-body-font-size: 0.9375rem;
+  --bs-border-radius: 0.625rem;
+  --bs-border-radius-lg: 0.875rem;
+
+  /* Custom tokens */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-surface-3: #e2e8f0;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #edf2f7;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-secondary: #f6d13b;
+  --color-secondary-hover: #c79f0e;
+  --color-accent: #6366f1;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  /* Màu riêng cho "Provider" (sảnh cược) — cố ý khác hẳn primary/success/warning/danger để
+     không bị nhầm với hover hay các badge trạng thái khác, đọc rõ ở cả 2 theme sáng/tối. */
+  --color-provider: #8b5cf6;
+
+  /* ─── Biến thể màu DÀNH RIÊNG CHO CHỮ ─────────────────────────────────────────
+     Các màu trên (--color-primary, --color-accent, --color-text-muted) được chọn cho
+     nền, viền và biểu tượng — dùng chúng làm màu CHỮ trên nền sáng thì không đủ tương
+     phản: #3b82f6 trên nền trắng chỉ đạt 3.68:1, dưới ngưỡng 4.5:1 của WCAG AA.
+     Ba token dưới đây là bản đậm hơn, CHỈ dùng cho chữ. Đừng dùng chúng làm màu nền. */
+  --color-text-muted-strong: #475569; /* chữ phụ trên nền surface-2 — 6.9:1 */
+  --color-primary-text: #1d4ed8;      /* link/nhãn xanh trên nền sáng — 8.3:1 */
+  --color-accent-text: #4338ca;       /* nhãn tím trên nền sáng — 8.1:1 */
+
+  /* Gradient dùng làm NỀN CHO CHỮ TRẮNG (nút chính, avatar, logo).
+     Không dùng thẳng --color-primary/--color-accent ở đây: chữ trắng trên #3b82f6 chỉ đạt
+     3.68:1 và trên #6366f1 đạt 4.47:1 — đều dưới ngưỡng 4.5:1 cho cỡ chữ thường. Hai tông
+     đậm hơn dưới đây đạt 5.17:1 và 6.29:1, mắt thường gần như không phân biệt được khác
+     biệt màu nhưng chữ thì rõ hơn hẳn. */
+  --gradient-primary: linear-gradient(135deg, #2563eb, #4f46e5);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-fab: 0 8px 24px rgba(59, 130, 246, 0.35);
+
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ─── Thang typography ───────────────────────────────────────────────────────
+     Trước đây giao diện dùng tới 20 cỡ chữ khác nhau trên CÙNG một trang (10.4px →
+     36px, gồm cả các số lẻ như 13.44px sinh ra do lồng đơn vị em). Bảy bậc dưới đây là
+     thang chuẩn duy nhất — luôn dùng token, đừng viết số px/rem trực tiếp nữa.
+
+     --fs-xs (12px) là SÀN TỐI THIỂU. Không dùng cỡ nhỏ hơn: chữ 10–11px vừa khó đọc vừa
+     là nguyên nhân chính khiến các nhãn phụ không đạt ngưỡng contrast 4.5:1 của WCAG AA. */
+  --fs-xs: 0.75rem;    /* 12px — nhãn phụ, số đếm, badge */
+  --fs-sm: 0.8125rem;  /* 13px — chữ phụ, meta, mô tả */
+  --fs-base: 0.9375rem;/* 15px — nội dung chính */
+  --fs-md: 1.0625rem;  /* 17px — tiêu đề thẻ */
+  --fs-lg: 1.25rem;    /* 20px — tiêu đề mục */
+  --fs-xl: 1.5rem;     /* 24px — tiêu đề trang */
+  --fs-2xl: 2rem;      /* 32px — tiêu đề bài viết */
+
+  --lh-tight: 1.25;    /* tiêu đề */
+  --lh-normal: 1.5;    /* nhãn, chữ ngắn */
+  --lh-relaxed: 1.65;  /* đoạn văn dài */
+
+  /* Vòng focus dùng chung cho mọi phần tử tương tác — xem khối :focus-visible bên dưới */
+  --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-primary);
+}
+
+/* ─── Tôn trọng thiết lập giảm chuyển động của hệ điều hành ────────────────────
+   Giao diện có 6 animation (fab ping, popup slide, typing bounce, heading flash...).
+   Người bị say chuyển động bật "Reduce motion" trong hệ điều hành thì phải được tắt. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+[data-bs-theme="dark"] {
+  --color-bg: #0b0f19;
+  --color-surface: #131b2e;
+  --color-surface-2: #1a233d;
+  --color-surface-3: #243054;
+  --color-border: #1e293b;
+  --color-border-subtle: #172033;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  /* Trên nền tối thì ngược lại: bản "đậm hơn" phải là bản SÁNG hơn mới đủ tương phản */
+  --color-text-muted-strong: #a8b6c9;
+  --color-primary-text: #93c5fd;
+  --color-accent-text: #a5b4fc;
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.65);
+  --shadow-fab: 0 8px 28px rgba(37, 99, 235, 0.45);
+}

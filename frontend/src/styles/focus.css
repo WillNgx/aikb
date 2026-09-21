@@ -1,0 +1,32 @@
+/* =============================================
+   FOCUS
+   Vòng focus bàn phím — BẮT BUỘC nạp cuối cùng
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FOCUS BÀN PHÍM — phải đặt CUỐI FILE
+   ═══════════════════════════════════════════════════════════════════════════════
+   File này có 13 chỗ `outline: none` nằm rải rác (ô nhập trong editor TipTap, ô tìm
+   kiếm cây, ô nhập bảng...) trong khi chỉ 1 chỗ có vòng focus thật. Hệ quả: người dùng
+   bàn phím không biết con trỏ đang ở đâu — không dùng nổi giao diện nếu không có chuột.
+
+   Vì các rule kia có độ ưu tiên cao hơn (dạng `.class:focus`), một rule chung đặt ở đầu
+   file sẽ bị đè. Đặt ở cuối file kèm `!important` là cách chắc chắn nhất để bàn phím
+   luôn có vòng focus, mà KHÔNG ảnh hưởng người dùng chuột: `:focus-visible` chỉ kích
+   hoạt khi trình duyệt xác định người dùng đang điều hướng bằng bàn phím.
+
+   Nếu sau này cần bỏ vòng focus ở một chỗ cụ thể, hãy sửa đúng chỗ đó thay vì gỡ
+   khối này. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px !important;
+}

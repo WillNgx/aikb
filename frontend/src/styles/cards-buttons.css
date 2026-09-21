@@ -1,0 +1,394 @@
+/* =============================================
+   CARDS-BUTTONS
+   Thẻ danh mục gốc, modal thêm mục, thanh nháp, TOÀN BỘ hệ nút bấm
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ─── Root Categories Grid (Home overview) ─────────────────── */
+.root-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.root-category-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.root-category-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Danh mục gốc đã được đánh dấu Provider — cùng kiểu viền tím như folder-child-card */
+.root-category-card.is-provider {
+  border: 2px solid var(--color-provider);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.root-category-card.is-provider:hover {
+  border-color: var(--color-provider);
+}
+
+/* Đầu thẻ danh mục.
+   Trước đây header là một hàng flex KHÔNG cho xuống dòng, gồm icon + khối tiêu đề +
+   nút Provider + nút xoá. Khi thẻ hẹp (2 cột trên màn hình ~700px, hoặc trên điện thoại),
+   khối tiêu đề chỉ còn 66px trong tổng 273px nên tên danh mục bị bẻ thành 3 dòng và
+   header cao tới 204px. Cho phép xuống dòng và đặt basis tối thiểu cho khối tiêu đề:
+   khi không đủ chỗ, cụm nút tự rơi xuống hàng dưới thay vì bóp nát tiêu đề. */
+.root-cat-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.root-cat-titles {
+  flex: 1 1 150px;
+  min-width: 0; /* cho phép chữ dài xuống dòng thay vì tràn khỏi thẻ */
+}
+
+.root-cat-icon {
+  font-size: 2rem;
+  flex: 0 0 auto;
+}
+
+.root-cat-title {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  color: var(--color-text);
+  margin: 0 0 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.root-cat-subtext {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  line-height: var(--lh-normal);
+}
+
+.root-cat-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.root-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--color-surface-2);
+}
+
+.sub-bullet {
+  font-size: 0.9rem;
+}
+
+.sub-count-tag {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-text-muted-strong);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.root-more-tag {
+  font-size: var(--fs-xs);
+  color: var(--color-primary-text);
+  font-weight: 600;
+  padding-left: 0.5rem;
+}
+
+.root-cat-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.explore-link {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-primary-text);
+}
+
+/* ─── Admin Add Modal & Type Selectors ──────────────────────── */
+.modal-box-custom {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 520px;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header-custom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.type-select-btn {
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.875rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+  color: var(--color-text);
+}
+
+.type-select-btn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.type-select-btn.active {
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.modal-footer-custom {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* ─── Wiki Draft Alert Bar & Actions ────────────────────────── */
+.draft-alert-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.15),
+    rgba(239, 68, 68, 0.1)
+  );
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  padding: 0.875rem 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.draft-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.draft-badge-tag {
+  background: #f59e0b;
+  color: #000;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.draft-alert-text {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.draft-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-publish-custom {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-publish-custom:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+/* ─── Nút bấm — nền chung cho MỌI biến thể ─────────────────────────────────────
+   Trước đây mỗi biến thể tự khai lại padding/font/radius và KHÔNG biến thể nào có trạng
+   thái :disabled hay :active. Hệ quả: nút đang bị vô hiệu hoá (đang lưu, chưa nhập đủ)
+   trông y hệt nút bấm được — người dùng bấm mãi không hiểu vì sao không có gì xảy ra.
+   Giờ mọi biến thể kế thừa khối này, chỉ khai riêng phần màu. */
+.btn-primary-custom,
+.btn-secondary-custom,
+.btn-danger-custom,
+.btn-publish-custom,
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: var(--lh-normal);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+
+/* Nhấn xuống: bỏ hiệu ứng nhấc lên để có phản hồi xúc giác rõ ràng */
+.btn-primary-custom:active:not(:disabled),
+.btn-secondary-custom:active:not(:disabled),
+.btn-danger-custom:active:not(:disabled),
+.btn-publish-custom:active:not(:disabled),
+.btn-cancel:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Vô hiệu hoá: mờ đi + con trỏ báo không bấm được + chặn mọi hiệu ứng hover */
+.btn-primary-custom:disabled,
+.btn-secondary-custom:disabled,
+.btn-danger-custom:disabled,
+.btn-publish-custom:disabled,
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+.btn-primary-custom {
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+}
+
+.btn-primary-custom:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+  color: #fff;
+}
+
+.btn-secondary-custom {
+  background: linear-gradient(
+    135deg,
+    var(--color-secondary),
+    var(--color-warning)
+  );
+  /* Nền vàng sáng nên chữ phải là màu tối mới đủ tương phản — chữ trắng trên nền vàng
+     chỉ đạt khoảng 1.8:1, dưới xa ngưỡng 4.5:1 của WCAG AA. */
+  color: #3d2c00;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+}
+
+.btn-secondary-custom:hover:not(:disabled) {
+  transform: translateY(-1px);
+  /* Bóng đổ trước đây dùng màu hồng rgba(246,59,115) trong khi nút màu vàng — đã sửa
+     cho khớp với chính màu nền của nút. */
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  color: #3d2c00;
+}
+
+.btn-cancel {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
+.btn-danger-custom {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+}
+
+.btn-danger-custom:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+
+/* Biến thể phụ: hành động thứ yếu, không cần nổi bật (vd nút icon trong bảng) */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: none;
+  color: var(--color-text-muted);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: var(--lh-normal);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Cỡ nhỏ — dùng cho nút nằm trong hàng của bảng danh sách */
+.btn-sm {
+  padding: 0.3rem 0.7rem;
+  font-size: var(--fs-xs);
+}
+
+.status-draft {
+  color: #f59e0b !important;
+  font-weight: 700;
+}

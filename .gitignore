@@ -1,0 +1,93 @@
+# =============================================
+# Environment & Secrets — KHÔNG BAO GIỜ commit
+# =============================================
+.env
+.env.local
+.env.*.local
+.env.production
+
+# =============================================
+# Dependencies
+# =============================================
+node_modules/
+.pnp
+.pnp.js
+
+# =============================================
+# Build outputs
+# =============================================
+dist/
+build/
+out/
+.next/
+
+# =============================================
+# TypeScript
+# =============================================
+*.tsbuildinfo
+
+# =============================================
+# Logs
+# =============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =============================================
+# OS & Editor
+# =============================================
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =============================================
+# Test coverage
+# =============================================
+coverage/
+.nyc_output/
+
+# =============================================
+# Drizzle
+# =============================================
+# KHÔNG ignore backend/drizzle/meta/ — drizzle-kit cần các file snapshot trong đó để
+# sinh migration đúng ở lần `db:generate` sau. Thiếu chúng, mỗi máy sẽ sinh ra migration
+# lệch nhau. (Rule `drizzle/meta/` cũ bị neo vào thư mục gốc repo nên vốn không khớp gì.)
+
+# =============================================
+# Docker
+# =============================================
+.dockerignore
+
+# =============================================
+# Miscellaneous
+# =============================================
+.cache/
+tmp/
+temp/
+
+# =============================================
+# Agent Skill
+# =============================================
+.agents/
+# =============================================
+# Dữ liệu NỘI BỘ — CHỈ giữ trên máy, KHÔNG commit
+# =============================================
+# Repo GitHub này để PUBLIC (Render gói miễn phí lấy code từ repo công khai), nên mọi tài liệu
+# nghiệp vụ, dữ liệu thật và công cụ dev có nhúng dữ liệu nội bộ phải nằm ở đây.
+markdown/
+promotion_data/
+benchmark_*
+.scratch/
+backend/scripts/
+CLAUDE.md
+.claude/

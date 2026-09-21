@@ -1,0 +1,12 @@
+{
+  "name": "aivnkb-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:be": "npm --prefix backend run dev",
+    "dev:fe": "npm --prefix frontend run dev",
+    "dev": "npx -y concurrently \"npm run dev:be\" \"npm run dev:fe\"",
+
+    "build": "npm --prefix backend run build && npm --prefix frontend run build"
+  }
+}

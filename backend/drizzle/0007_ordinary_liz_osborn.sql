@@ -1,0 +1,1 @@
+ALTER TYPE "public"."audit_action" ADD VALUE 'user_delete' BEFORE 'slang_create';

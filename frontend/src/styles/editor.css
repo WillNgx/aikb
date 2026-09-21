@@ -1,0 +1,1541 @@
+/* =============================================
+   EDITOR
+   TipTap: khối nội dung, callout, bảng nâng cao, danh sách, chọn emoji, dropdown
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ─── Wiki Edit Mode Form ───────────────────────────────────── */
+.wiki-edit-mode-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.edit-mode-actions-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.editor-quick-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tag-btn {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.tag-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.code-editor-area {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* ─── Notion-Style Nested Block Tree Styles ─────────────────── */
+.nested-block-editor-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 100%;
+}
+
+.blocks-tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.h1-block-row,
+.h2-block-row,
+.h3-block-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.content-block-box {
+  width: 100%;
+}
+
+.callout-box-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 4px solid #f59e0b;
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin: 0.5rem 0;
+}
+
+.image-block-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 600px;
+}
+
+.image-caption-text {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.image-edit-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.table-block-box {
+  width: 100%;
+}
+
+.table-toolbar-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.4rem;
+}
+
+.btn-table-header-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-table-header-color:hover {
+  border-color: var(--color-primary);
+}
+
+.table-cell-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.4rem;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.table-cell-input:focus {
+  background: var(--color-surface-2);
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* ─── Notion Nested Children Container ──────────────────────── */
+
+.children-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.add-child-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 0.35rem;
+}
+
+.btn-add-child-trigger {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px dashed rgba(59, 130, 246, 0.35);
+  color: var(--color-primary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-add-child-trigger:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: var(--color-primary);
+}
+
+.add-child-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 230px;
+}
+
+.popover-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+}
+
+.popover-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+}
+
+.popover-item-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-primary);
+}
+
+.popover-icon {
+  font-size: 1rem;
+}
+
+.empty-blocks-state {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-2);
+}
+
+/* ─── Callout (Cảnh báo / Đặc biệt) Block Styles ───────────── */
+.callout-block-box {
+  width: 100%;
+  border-radius: 10px;
+  padding: 0.875rem 1.15rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.6rem;
+  transition: all var(--transition);
+}
+
+.callout-block-box.variant-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 5px solid #f59e0b;
+  border-top: 1px solid rgba(245, 158, 11, 0.25);
+  border-right: 1px solid rgba(245, 158, 11, 0.25);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.callout-block-box.variant-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-left: 5px solid #ef4444;
+  border-top: 1px solid rgba(239, 68, 68, 0.25);
+  border-right: 1px solid rgba(239, 68, 68, 0.25);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.callout-block-box.variant-success {
+  background: rgba(16, 185, 129, 0.12);
+  border-left: 5px solid #10b981;
+  border-top: 1px solid rgba(16, 185, 129, 0.25);
+  border-right: 1px solid rgba(16, 185, 129, 0.25);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.callout-block-box.variant-info {
+  background: rgba(59, 130, 246, 0.12);
+  border-left: 5px solid #3b82f6;
+  border-top: 1px solid rgba(59, 130, 246, 0.25);
+  border-right: 1px solid rgba(59, 130, 246, 0.25);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.callout-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.callout-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+
+.callout-color-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.color-dot-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.color-dot-btn:hover {
+  transform: scale(1.2);
+}
+
+.color-dot-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+.color-dot-btn.warning {
+  background: #f59e0b;
+}
+
+.color-dot-btn.danger {
+  background: #ef4444;
+}
+
+.color-dot-btn.success {
+  background: #10b981;
+}
+
+.color-dot-btn.info {
+  background: #3b82f6;
+}
+
+.callout-content-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  outline: none;
+}
+
+[data-bs-theme="dark"] .callout-content-textarea {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.callout-rendered-text {
+  font-size: 0.925rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* ─── Advanced Table Styles ─────────────────────────────────── */
+.doc-table-custom {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+}
+
+.table-th-cell {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.th-content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.th-header-input {
+  background: transparent;
+  border: 1px solid transparent;
+  font-weight: 700;
+  color: var(--color-text);
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.th-header-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  outline: none;
+}
+
+.btn-th-del,
+.btn-delete-row {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.6;
+}
+
+.btn-th-del:hover,
+.btn-delete-row:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
+  opacity: 1;
+}
+
+.btn-add-col-header {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px dashed var(--color-primary);
+  color: var(--color-primary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.table-td-cell {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+  position: relative;
+}
+
+.cell-image-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cell-img {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.cell-sub-input {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text);
+}
+
+.nested-table-cell {
+  padding: 0.35rem;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 4px;
+}
+
+.nested-table-tag {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.cell-type-toolbar {
+  display: flex;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+}
+
+.cell-type-btn {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.cell-type-btn:hover,
+.cell-type-btn.active {
+  opacity: 1;
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.table-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn-table-action {
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-table-action:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ─── Block Content & Auto-resize Textarea & Wiki Layout ─────── */
+
+.callout-rendered-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  font-size: 0.925rem;
+  color: var(--color-text);
+}
+
+.block-content-textarea,
+.callout-content-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  resize: none;
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.block-content-textarea:focus,
+.callout-content-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* WikiPage Expanded Layout */
+.wiki-page-container {
+  width: 100%;
+  animation: fadeIn 0.2s ease;
+}
+
+.wiki-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 1.75rem;
+  align-items: start;
+  width: 100%;
+}
+
+/* Khớp với breakpoint `d-lg-block` của cột mục lục trong WikiPage.tsx — hai chỗ này phải
+   cùng ngưỡng, lệch nhau là hoặc thừa một cột trống, hoặc mục lục bị ép vào cột quá hẹp. */
+@media (max-width: 991.98px) {
+  .wiki-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.wiki-article-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 2.25rem 2.75rem;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .wiki-article-card {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.wiki-article-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 0.75rem;
+  line-height: 1.3;
+}
+
+.wiki-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.wiki-breadcrumb {
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+}
+
+/* ─── Lists (Bullet List & Numbered List) ─────────────────────── */
+.doc-bullet-list {
+  margin: 0.5rem 0 1rem 1.5rem;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.doc-numbered-list {
+  margin: 0.5rem 0 1rem 1.5rem;
+  padding: 0;
+  list-style-type: decimal;
+}
+
+.doc-list-item {
+  margin-bottom: 0.4rem;
+  line-height: 1.65;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.list-edit-container {
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.list-edit-header {
+  margin-bottom: 0.65rem;
+}
+
+.list-type-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.list-item-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.bullet-symbol,
+.number-symbol {
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 1.5rem;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.list-item-input {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.list-item-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.btn-item-inline-emoji,
+.btn-del-list-item {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all var(--transition);
+}
+
+.btn-item-inline-emoji:hover {
+  background: var(--color-surface-2);
+}
+
+.btn-del-list-item:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
+}
+
+.btn-add-list-item {
+  background: none;
+  border: 1px dashed var(--color-primary);
+  color: var(--color-primary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 0.35rem;
+  transition: all var(--transition);
+}
+
+.btn-add-list-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* ─── Emoji Picker Popover ───────────────────────────────────── */
+.emoji-picker-popover {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  width: 340px;
+  z-index: 2000;
+  animation: scaleIn 0.15s ease;
+  overflow: hidden;
+}
+
+.emoji-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.picker-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.btn-clear-emoji {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-clear-emoji:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-close-emoji {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.emoji-tabs-bar {
+  display: flex;
+  padding: 0.4rem 0.6rem;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.emoji-tab-btn {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.emoji-tab-btn:hover {
+  background: var(--color-surface-2);
+}
+
+.emoji-tab-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.emoji-grid-body {
+  padding: 0.75rem 1rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.group-name-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+
+.emoji-item-btn {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  padding: 0.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-item-btn:hover {
+  background: var(--color-surface-2);
+  transform: scale(1.2);
+}
+
+/* Block Icon Trigger Button */
+.btn-block-icon-trigger {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 1.15rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.btn-block-icon-trigger:hover {
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+  transform: scale(1.05);
+}
+
+.btn-heading-color {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.35rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-heading-color:hover {
+  border-color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+.callout-icon-btn {
+  font-size: 1.35rem;
+  padding: 0.35rem 0.65rem;
+  flex-shrink: 0;
+}
+
+.content-edit-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-inline-emoji-insert {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-inline-emoji-insert:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* ─── Notion-Style Block Tree & Add Block Toolbars ───────────── */
+
+/* Heading Inputs Cursor & Styling */
+
+.h1-block-row,
+.h2-block-row,
+.h3-block-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ─── Add Child & Top-Level Buttons (Modern UI) ──────────────── */
+
+.dropdown-add-child,
+.top-level-add-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-child-hint {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dropdown-title-hint {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 0.25rem;
+}
+
+.add-child-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.btn-sub-block-add {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-sub-block-add:hover {
+  border-color: var(--color-primary);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1),
+    rgba(139, 92, 246, 0.1)
+  );
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.18);
+}
+
+.top-level-add-bar {
+  /* Ẩn nút "+ Thêm block mới" cấp ngoài cùng theo yêu cầu — logic giữ nguyên, gõ "/" trong 1
+     block đang có nội dung vẫn mở được menu chọn loại block như cũ. */
+  display: none;
+}
+
+.btn-root-block-add {
+  background: var(--color-surface);
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.45rem 0.95rem;
+  border-radius: 24px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.08);
+}
+
+.btn-root-block-add:hover {
+  border-color: var(--color-accent);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.15),
+    rgba(59, 130, 246, 0.15)
+  );
+  color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.22);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TIPTAP TOOLBAR — Rich Text Formatting (Bold, Italic, Underline,
+   Color, Highlight, Size, Block background) — thay thế FormatToolbar
+   ═══════════════════════════════════════════════════════════════ */
+
+.tiptap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+  /* Toolbar cố định (sticky) — luôn hiện trong lúc soạn thảo, không chỉ nổi khi bôi đen như
+     BubbleMenu trước đây, khớp trải nghiệm nhập liệu kiểu Word. */
+  position: sticky;
+  top: 2rem;
+  z-index: 5;
+}
+
+.tiptap-toolbar-error {
+  font-size: var(--fs-xs);
+  color: var(--color-danger);
+  padding: 0.35rem 0.6rem 0;
+}
+
+.tiptap-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tiptap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
+}
+
+.tiptap-btn:hover {
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(59, 130, 246, 0.18);
+}
+
+.tiptap-btn.is-active,
+.tiptap-btn.is-open {
+  border-color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-accent);
+}
+
+.tiptap-btn-label {
+  font-size: var(--fs-xs);
+}
+
+.tiptap-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-border);
+  margin: 0 0.15rem;
+}
+
+.dropdown-caret {
+  font-size: var(--fs-xs);
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .tiptap-btn-label {
+    display: none;
+  }
+  .tiptap-btn {
+    padding: 0.275rem 0.4rem;
+  }
+}
+
+.btn-emoji-trigger {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.1),
+    rgba(239, 68, 68, 0.08)
+  );
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.btn-emoji-trigger:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.2),
+    rgba(239, 68, 68, 0.15)
+  );
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+.btn-table-delete {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-danger);
+}
+
+.btn-table-delete:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* ─── TipTap Dropdown (Color / Highlight / Size / Block BG) ──── */
+
+.tiptap-dropdown-wrap {
+  position: relative;
+}
+
+.tiptap-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 9999;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.625rem;
+  min-width: 200px;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.16),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: dropdown-appear 0.15s ease forwards;
+}
+
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-menu-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.color-swatch-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.color-swatch-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.color-swatch-btn.selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.bgcolor-preview {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.font-size-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.font-size-number-input {
+  width: 64px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.font-size-unit {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.font-size-apply-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.font-size-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.font-size-preset-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.font-size-preset-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ─── TipTap Editor Surface (vùng soạn thảo WYSIWYG) ─────────── */
+
+.tiptap-editor-wrap {
+  border: 1.5px solid var(--color-border);
+  border-radius: 0 0 10px 10px;
+  background: var(--color-surface);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.tiptap-editor-wrap:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.tiptap-editor-wrap:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+/* Chế độ chỉ đọc (View mode) — bỏ khung/nền dạng ô nhập liệu, hiện như văn bản thường của
+   trang tài liệu, không phải 1 ô soạn thảo. */
+.tiptap-editor-wrap--readonly {
+  border: none;
+  background: transparent;
+}
+
+.tiptap-editor-wrap--readonly:hover,
+.tiptap-editor-wrap--readonly:focus-within {
+  border: none;
+  box-shadow: none;
+}
+
+.tiptap-editor-wrap--readonly .tiptap-prosemirror {
+  padding: 0;
+  cursor: default;
+}
+
+.tiptap-prosemirror {
+  min-height: 50vh;
+  padding: 0.75rem 0.9rem;
+  color: var(--color-text);
+  caret-color: var(--color-text);
+  font-size: 0.925rem;
+  line-height: 1.65;
+  cursor: default;
+  outline: none;
+}
+
+/* Chữ được bôi nền (Highlight).
+   Extension @tiptap/extension-highlight tự ghi INLINE STYLE `color: inherit` lên thẻ <mark>.
+   Inline style thắng mọi rule CSS thường, nên rule này trước đây không hề có tác dụng — nó
+   chỉ trông có vẻ đúng ở theme Sáng, vì `inherit` khi đó nhận màu chữ tối của bài viết.
+   Sang theme Tối, `inherit` nhận màu chữ gần trắng đặt trên nền vàng nhạt: contrast đo được
+   chỉ 1.03:1, coi như không đọc được.
+
+   Cả 6 màu highlight đều là pastel SÁNG (xem HIGHLIGHT_COLORS trong TiptapToolbar.tsx), nên
+   chữ phải LUÔN tối ở cả hai theme. `!important` ở đây là bắt buộc để thắng inline style của
+   thư viện — đây đúng là trường hợp nên dùng. Nếu sau này bổ sung màu highlight tối, phải
+   đổi cách làm chứ không chỉ thêm màu vào bảng. */
+.tiptap-prosemirror mark,
+.wiki-body-content mark,
+.chat-markdown mark {
+  color: #1f2933 !important;
+}
+
+/* Bảng trong bài viết.
+   Trước đây `width: 100%` buộc bảng LUÔN co bằng bề ngang khung bài viết, nên thanh cuộn
+   ngang của .tableWrapper không bao giờ kích hoạt: bảng 6 cột trong khung ~500px cho ra cột
+   ~80px và chữ bị bẻ giữa từ ("Roulett / e: 15 VND"). `min-width: 1em` đặt trên ô cũng vô
+   nghĩa vì `table-layout: fixed` bỏ qua min-width của ô.
+
+   Cách đúng: đặt min-width trên CHÍNH thẻ table. Bảng vẫn giãn đầy khung khi khung đủ rộng,
+   nhưng khi khung hẹp hơn thì bảng giữ bề ngang tối thiểu và người đọc cuộn ngang — dễ đọc
+   hơn nhiều so với việc mỗi ô chỉ còn 1–2 chữ mỗi dòng.
+   Giữ `table-layout: fixed` vì tính năng kéo giãn cột của TipTap phụ thuộc vào nó. */
+/* Bảng trong bài viết.
+   `width: 100%` khiến bảng luôn co bằng bề ngang khung, nên thanh cuộn ngang của
+   .tableWrapper không bao giờ kích hoạt và bảng nhiều cột bị bóp đến mức chữ bẻ giữa từ.
+
+   Bề ngang tối thiểu KHÔNG đặt được ở đây: TipTap tự ghi inline style `min-width` lên thẻ
+   <table> (bằng tổng min-width các cột) và inline style đè mọi rule CSS thường. Chỗ chỉnh
+   đúng là option `cellMinWidth` của Table extension trong components/TiptapEditor.tsx.
+   Giữ `table-layout: fixed` vì tính năng kéo giãn cột của TipTap phụ thuộc vào nó. */
+.tiptap-prosemirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  table-layout: fixed;
+}
+
+.tiptap-prosemirror .tableWrapper {
+  overflow-x: auto;
+  /* Chừa chỗ cho thanh cuộn để nó không đè lên hàng cuối của bảng */
+  padding-bottom: 0.25rem;
+}
+
+.tiptap-prosemirror .resize-cursor {
+  cursor: col-resize;
+}
+.tiptap-prosemirror th,
+.tiptap-prosemirror td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  min-width: 1em;
+}
+
+/* Thanh kéo đổi độ rộng cột: hiện ở viền phải mỗi ô khi rê chuột vào viền giữa 2 cột */
+.tiptap-prosemirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: var(--color-primary);
+  pointer-events: none;
+}
+
+.tiptap-prosemirror img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.tiptap-prosemirror p {
+  margin: 0 0 0.5rem;
+}
+
+.tiptap-prosemirror p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-prosemirror tr:first-child > th p {
+  color: #000000;
+  text-align: center;
+}
+
+/* Placeholder khi rỗng — do @tiptap/extension-placeholder gắn class + attribute */
+.tiptap-prosemirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+.content-block.tiptap-prosemirror,
+.callout-content.tiptap-prosemirror {
+  min-height: 64px;
+}
+
+/* ─── Dark Mode Adjustments ──────────────────────────────────── */
+
+[data-bs-theme="dark"] .tiptap-toolbar {
+  background: rgba(26, 35, 61, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .tiptap-dropdown-menu {
+  background: var(--color-surface);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+[data-bs-theme="dark"] .tiptap-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-text);
+}
+
+[data-bs-theme="dark"] .tiptap-btn:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+[data-bs-theme="dark"] .tiptap-editor-wrap {
+  background: var(--color-surface-2);
+}
+
+/* Chế độ Xem phải trong suốt ở CẢ theme Tối. Rule `.tiptap-editor-wrap--readonly` phía trên có
+   độ ưu tiên THẤP HƠN rule dark ngay trên đây, nên trước khi có khối này, bài viết đang XEM vẫn
+   bị tô nền --color-surface-2 và lòi ra thành một khối màu khác nằm trong thẻ bài viết. */
+[data-bs-theme="dark"] .tiptap-editor-wrap--readonly {
+  background: transparent;
+}
+
+[data-bs-theme="dark"] .font-size-number-input,
+[data-bs-theme="dark"] .font-size-preset-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ─── content-edit-wrapper layout ───────────────────────────── */
+
+/* ─── Image Block: Upload từ máy (Supabase Storage) ───────────── */
+
+.image-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.btn-upload-image {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.825rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-upload-image:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-upload-image:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.image-upload-error {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* ─── Pointer-based Drag Ghost Preview (thay thế native drag image) ─── */
+
+.tree-drag-ghost {
+  position: fixed;
+  z-index: 3000;
+  pointer-events: none;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary);
+  color: var(--color-text);
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-drag-grip {
+  touch-action: none;
+}

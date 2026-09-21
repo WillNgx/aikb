@@ -1,0 +1,79 @@
+/* =============================================
+   ADMIN
+   Lớp dùng chung cho các trang quản trị
+
+   Tách ra từ index.css. THỨ TỰ @import trong index.css là một phần của thiết kế —
+   nhiều rule ở file sau cố ý đè rule ở file trước. Đừng đổi thứ tự nạp.
+   ============================================= */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   LỚP DÙNG CHUNG CHO TRANG QUẢN TRỊ
+   ═══════════════════════════════════════════════════════════════════════════════
+   Thay cho các khối style={{...}} lặp đi lặp lại trong các trang admin. Trước đây cùng một
+   kiểu tiêu đề trang được viết lại 6 lần ở 6 file khác nhau — đổi cỡ chữ phải sửa từng chỗ,
+   và thực tế đã lệch nhau. */
+.page-title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  color: var(--color-text);
+  margin: 0 0 0.25rem;
+}
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+/* Thẻ nội dung trong trang quản trị — dùng kèm .card-custom */
+.card-section {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-section-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  margin: 0 0 0.5rem;
+}
+
+.card-section-desc {
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  margin: 0 0 1rem;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BẢNG TRONG TRANG QUẢN TRỊ
+   ═══════════════════════════════════════════════════════════════════════════════
+   Class .table-custom được gắn lên TỪNG ô <th>/<td> ở 4 trang Admin (Người dùng, Từ điển Từ
+   lóng, Tài khoản Telegram, Audit Log) — hơn 40 chỗ — nhưng trước đây không tồn tại trong CSS,
+   nên mọi bảng quản trị đều hiển thị bằng style mặc định của trình duyệt: không padding, không
+   viền, hàng tiêu đề dính sát hàng dữ liệu.
+
+   Các trang vẫn đặt inline style textAlign: 'right' ở một số cột — inline thắng rule
+   ở đây nên căn lề riêng của từng cột giữ nguyên, không phải sửa file .tsx nào. */
+.table-custom {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  font-size: var(--fs-sm);
+}
+
+th.table-custom {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted-strong);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* Hàng cuối không cần gạch chân — đã có viền của .card-custom bao ngoài */
+tbody tr:last-child .table-custom {
+  border-bottom: none;
+}

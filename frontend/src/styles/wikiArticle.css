@@ -1,0 +1,282 @@
+/* ===========================================================================
+   Wiki Article — hệ thống chữ/màu riêng cho bề mặt đọc/soạn bài viết
+   (WikiPage.tsx + TiptapEditor.tsx, 1 tài liệu TipTap liên tục kiểu Word).
+   CỐ Ý tách khỏi index.css và dùng token --wiki-* riêng thay vì --color-* của
+   app, để đọc như 1 hệ thống có chủ đích — không đụng tới sidebar/admin/login
+   (những nơi này không render .wiki-page-container nên các token dưới đây
+   không rò rỉ ra ngoài).
+   Theme sáng/tối tái dùng đúng cơ chế [data-bs-theme] đã có của app
+   (AppLayout.tsx set thuộc tính này lên <html>), không tạo thêm công tắc theme thứ 2.
+   =========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.wiki-page-container {
+  --wiki-font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --wiki-font-body:
+    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --wiki-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --wiki-bg: #faf8f5;
+  --wiki-surface: #ffffff;
+  --wiki-surface-2: #f3f1ec;
+  --wiki-border: #e6e1d8;
+  --wiki-border-strong: #d5cfc2;
+  --wiki-text: #1f2320;
+  --wiki-text-muted: #6b6a63;
+  --wiki-text-faint: #a19e93;
+  --wiki-accent: #0e6b5c;
+  --wiki-accent-ink: #ffffff;
+  --wiki-accent-wash: #e6f1ec;
+  --wiki-accent-wash-strong: #cfe6dd;
+  --wiki-danger: #a3372a;
+
+  background: var(--wiki-bg);
+  color: var(--wiki-text);
+  font-family: var(--wiki-font-body);
+}
+
+/* Dark mode: bề mặt bài viết dùng ĐÚNG dải navy của app (xem --color-* trong tokens.css) thay
+   vì dải xám trung tính như trước. Lý do đổi: một màn hình bài viết từng có 3 hệ nền chồng lên
+   nhau — nền app navy #0b0f19, thẻ bài viết xám #1e2022, khối soạn thảo navy #1a233d — nhìn
+   như 3 mảnh ghép của 3 sản phẩm khác nhau. Các giá trị dưới đây lấy THẲNG từ token app tương
+   ứng (ghi rõ ở chú thích cuối dòng); đổi token app thì phải đổi kèm ở đây. */
+[data-bs-theme="dark"] .wiki-page-container {
+  --wiki-bg: #0b0f19;            /* = --color-bg */
+  --wiki-surface: #131b2e;       /* = --color-surface */
+  --wiki-surface-2: #1a233d;     /* = --color-surface-2 */
+  --wiki-border: #1e293b;        /* = --color-border */
+  --wiki-border-strong: #243054; /* = --color-surface-3 */
+  --wiki-text: #f1f5f9;          /* = --color-text */
+  --wiki-text-muted: #94a3b8;    /* = --color-text-muted */
+  /* Sáng hơn bản cũ (#6c6a64): chữ mờ nhất của mục lục nằm ở cỡ 12px, tông cũ đặt trên nền
+     navy không đạt ngưỡng tương phản đọc được. */
+  --wiki-text-faint: #7c8ba3;
+  /* Accent GIỮ tông ngọc để không lẫn với xanh thương hiệu của nút/link. Riêng 2 mảng nền loang
+     phải pha về phía navy, nếu không sẽ ánh xanh lá lạc lõng trên nền mới. */
+  --wiki-accent: #3fa891;
+  --wiki-accent-ink: #0d1615;
+  --wiki-accent-wash: #162e3a;
+  --wiki-accent-wash-strong: #1d3d4d;
+  --wiki-danger: #d97f72;
+}
+
+/* ── Thẻ bài viết — dùng lại đúng class hiện có, chỉ đổi token nguồn + style thành "1 trang
+   giấy" thống nhất (giới hạn bề rộng đọc, giống 1 trang tài liệu Word) ── */
+.wiki-page-container .wiki-article-card {
+  background: var(--wiki-surface);
+  border: 1px solid var(--wiki-border);
+  color: var(--wiki-text);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.wiki-page-container .wiki-article-title {
+  font-family: var(--wiki-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--wiki-text);
+}
+
+/* ── Tiêu đề H1/H2/H3 trong nội dung bài viết (thẻ thật do TipTap sinh ra) ── */
+.wiki-page-container .tiptap-prosemirror h1,
+.wiki-page-container .tiptap-prosemirror h2,
+.wiki-page-container .tiptap-prosemirror h3 {
+  font-family: var(--wiki-font-display);
+  font-weight: 600;
+  color: var(--wiki-text);
+  line-height: 1.3;
+}
+
+.wiki-page-container .tiptap-prosemirror h1 {
+  font-size: 1.65rem;
+  margin: 1.75rem 0 0.75rem;
+}
+
+.wiki-page-container .tiptap-prosemirror h2 {
+  font-size: 1.3rem;
+  margin: 1.5rem 0 0.6rem;
+}
+
+.wiki-page-container .tiptap-prosemirror h3 {
+  font-size: 1.1rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.wiki-page-container .tiptap-prosemirror h1:first-child,
+.wiki-page-container .tiptap-prosemirror h2:first-child,
+.wiki-page-container .tiptap-prosemirror h3:first-child {
+  margin-top: 0;
+}
+
+/* ── Nút copy link trên H1/H2 (chèn qua HeadingAnchor.ts) — chỉ hiện khi đang ở chế độ Xem
+   (.tiptap-editor-wrap--readonly), ẩn khi đang Chỉnh sửa để không rối trình soạn thảo; chỉ
+   hiện icon khi hover vào chính heading đó, tránh rối giao diện đọc bình thường. ── */
+.wiki-page-container .heading-copy-link-btn {
+  display: none;
+}
+
+.wiki-page-container .tiptap-editor-wrap--readonly .heading-copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  margin-left: 0.5rem;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.wiki-page-container .tiptap-editor-wrap--readonly .tiptap-prosemirror h1:hover .heading-copy-link-btn,
+.wiki-page-container .tiptap-editor-wrap--readonly .tiptap-prosemirror h2:hover .heading-copy-link-btn {
+  opacity: 1;
+}
+
+.wiki-page-container .heading-copy-link-btn:hover {
+  background: var(--wiki-accent-wash);
+}
+
+.wiki-page-container .tiptap-prosemirror p,
+.wiki-page-container .tiptap-prosemirror li {
+  color: var(--wiki-text);
+  line-height: 1.7;
+}
+
+.wiki-page-container code,
+.wiki-page-container kbd,
+.wiki-page-container .tiptap-prosemirror pre {
+  font-family: var(--wiki-font-mono);
+}
+
+/* ── TOC sidebar — nằm trong cột grid thứ 2, sticky khi cuộn ── */
+.wiki-page-container .wiki-toc-sidebar {
+  position: sticky;
+  top: 6rem;        /* bám lại khi cuộn đến đây, không đè lên article */
+  /* Không cần right/z-index vì đã nằm trong grid flow bình thường */
+}
+
+/* ── TOC card: flex column, title cố định, nav tự cuộn ── */
+.wiki-page-container .toc-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 8rem); /* giới hạn chiều cao ở đây */
+  background: var(--wiki-surface);
+  border: 1px solid var(--wiki-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden; /* clip rounded corners */
+}
+
+[data-bs-theme="dark"] .wiki-page-container .toc-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Tiêu đề: flex-shrink:0 — không bị ép co khi nav dài ── */
+.wiki-page-container .toc-title {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wiki-text-faint);
+  border-bottom: 1px solid var(--wiki-border);
+  background: var(--wiki-surface-2);
+}
+
+/* ── Nav: vùng scroll DUY NHẤT — cuộn nội dung bên trong card ── */
+.wiki-page-container .toc-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.35rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wiki-border-strong) transparent;
+}
+
+.wiki-page-container .toc-item-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Link chung ── */
+.wiki-page-container .toc-link {
+  display: block;
+  padding: 0.28rem 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--wiki-text-muted);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wiki-page-container .toc-link:hover,
+.wiki-page-container .toc-link.active {
+  color: var(--wiki-accent);
+  background: var(--wiki-accent-wash);
+}
+
+/* ── Phân cấp H1 / H2 / H3 ── */
+.wiki-page-container .toc-link.h1-link {
+  font-weight: 600;
+  color: var(--wiki-text);
+}
+
+.wiki-page-container .toc-link.h2-link {
+  padding-left: 1.4rem;
+  font-weight: 500;
+}
+
+.wiki-page-container .toc-link.sub-link {
+  padding-left: 2rem;
+  font-size: 0.75rem;
+  color: var(--wiki-text-faint);
+}
+
+/* ── Danh sách con ── */
+.wiki-page-container .toc-sub-list {
+  display: flex;
+  flex-direction: column;
+  border-left: 1.5px solid var(--wiki-border);
+  margin-left: 1.1rem;
+}
+
+/* ── Blockquote (Trích dẫn) — viền trái + chữ nghiêng ── */
+.wiki-page-container .tiptap-prosemirror blockquote {
+  border-left: 3px solid var(--wiki-accent);
+  padding: 0.25rem 0 0.25rem 1rem;
+  margin: 0.75rem 0;
+  font-style: italic;
+  color: var(--wiki-text-muted);
+}
+
+/* ── Horizontal rule (Divider) ── */
+.wiki-page-container .tiptap-prosemirror hr {
+  border: none;
+  border-top: 1px solid var(--wiki-border-strong);
+  margin: 1.25rem 0;
+}
+
+/* ── Table ── */
+.wiki-page-container .tiptap-prosemirror th,
+.wiki-page-container .tiptap-prosemirror td {
+  border-color: var(--wiki-border-strong);
+}
+
+.wiki-page-container .tiptap-prosemirror th {
+  /* Cố định — khớp với .tiptap-prosemirror th trong index.css, không đổi theo --wiki-* theme. */
+  background: #f0f1f2;
+  color: #1f2933;
+}
