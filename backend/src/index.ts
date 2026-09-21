@@ -30,11 +30,14 @@ import { startTelegramBot } from './modules/telegram/telegram.bot';
 const app = express();
 
 // ─── Reverse Proxy ────────────────────────────────────────────────────────────
-// Tin đúng 1 hop proxy phía trước (Render/Railway/Cloudflare khi deploy production). Thiếu dòng
-// này thì `req.ip` luôn là IP của proxy chứ không phải IP thật của client — mọi người dùng bị
-// tính chung một bucket rate-limit. Đặt `1`, KHÔNG đặt `true` (tin mọi hop): `true` sẽ tin luôn
-// header `X-Forwarded-For` do chính client tự gửi, cho phép giả IP để lách rate-limit.
-app.set('trust proxy', 1);
+// Trên Render request đi qua ĐÚNG 2 lớp proxy: Cloudflare (nối IP thật của client vào
+// X-Forwarded-For) rồi tới bộ cân bằng tải của Render (nối tiếp IP của nút Cloudflare). Vì vậy phải
+// tin 2 hop thì `req.ip` mới là IP người dùng. Đặt `1` như trước thì `req.ip` là IP nút Cloudflare
+// — đã đo trên production 21/09/2026: cùng một máy mà request rơi ngẫu nhiên vào 2 bộ đếm khác
+// nhau, tức cả công ty dùng chung vài bộ đếm rate-limit và dễ bị 429 oan.
+// KHÔNG đặt `true` (tin mọi hop): khi đó giá trị X-Forwarded-For do chính client tự gửi cũng được
+// tin, cho phép giả IP để lách rate-limit. Đổi nơi deploy (thêm/bớt proxy) thì phải đo lại số hop.
+app.set('trust proxy', 2);
 
 // ─── Security Headers ────────────────────────────────────────────────────────
 app.use(helmet());
