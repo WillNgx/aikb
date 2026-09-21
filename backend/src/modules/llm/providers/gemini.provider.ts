@@ -95,8 +95,13 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * (không gọi lại model đang treo — chờ thêm vô ích). Câu trả lời bình thường chỉ mất vài giây.
  */
 const PRIMARY_TIMEOUT_MS = 25_000;
-/** Bản nhẹ thường trả lời trong 1–3s; vẫn phải có giới hạn để không bao giờ treo vô hạn. */
-const FALLBACK_TIMEOUT_MS = 30_000;
+/**
+ * Bản nhẹ lúc bình thường trả lời trong 1–3s, nhưng khi Google quá tải diện rộng cũng chậm tới
+ * 26–29s (đo 21/09/2026) — đặt 45s để lúc đó vẫn ra câu trả lời thay vì báo lỗi. Vẫn phải có giới
+ * hạn để không bao giờ treo vô hạn. Stream đã gửi tiến trình từ sớm nên không chạm giới hạn 100s
+ * của Cloudflare phía trước Render.
+ */
+const FALLBACK_TIMEOUT_MS = 45_000;
 
 /**
  * Gọi Gemini bằng MỘT key: model chính (gọi lại khi báo 503; treo quá PRIMARY_TIMEOUT_MS thì bỏ
