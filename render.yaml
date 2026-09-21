@@ -1,0 +1,45 @@
+# Render Blueprint cho backend — Render → New → Blueprint → chọn repo này là tạo xong service.
+# Biến có `sync: false` là SECRET: Render hỏi giá trị lúc tạo, KHÔNG bao giờ ghi giá trị vào file
+# này (repo để public). Lấy giá trị từ file .env ở máy dev.
+services:
+  - type: web
+    name: aikb-api # → https://aikb-api.onrender.com (frontend trỏ VITE_API_URL vào địa chỉ này + /api)
+    runtime: node
+    plan: free
+    region: singapore # cùng khu vực với Supabase (ap-southeast-1) cho nhanh
+    rootDir: backend
+    # --include=dev: NODE_ENV=production làm `npm ci` bỏ devDependencies, mà build cần `typescript`
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # BẮT BUỘC production: thiếu thì lỗi server trả kèm stack trace và giới hạn truy cập chung bị tắt
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        value: https://wrxsxtdeyzvsbhncevmm.supabase.co
+      # Domain frontend trên Vercel (vd https://aikb-xxx.vercel.app) — CORS chỉ nhận đúng domain này
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Tuỳ chọn — để trống nếu không dùng
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: CUSTOM_API_KEY
+        sync: false
+      # ⚠️ Bot Telegram chỉ được chạy ở ĐÚNG MỘT nơi: điền token ở đây thì phải bỏ token khỏi .env ở
+      # máy dev, nếu không hai nơi tranh nhau nhận tin và Telegram ngắt một bên (bot chết im lặng).
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ADMIN_CONTACT
+        sync: false
