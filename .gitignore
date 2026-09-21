@@ -91,3 +91,6 @@ benchmark_*
 backend/scripts/
 CLAUDE.md
 .claude/
+
+.vercel
+.env*.local
