@@ -54,7 +54,11 @@ Viết lại nội dung trên thành một truy vấn tìm kiếm. Chỉ trả v
         // temperature 0: cùng một câu hỏi phải cho ra cùng một truy vấn, nếu không thì người dùng
         // báo lỗi mà chạy lại không tái hiện được.
         temperature: 0,
-        maxOutputTokens: 200,
+        // 1024 chứ không phải 200: model Gemini 3.x dùng token "suy nghĩ" nội bộ TÍNH VÀO giới hạn này
+        // (đo được ~385 token cho một câu hỏi rất ngắn). Để 200 thì câu viết lại bị cắt cụt — log thật
+        // 21/09/2026: "khuyến mãi hoàn tiền" → "khuyê" — rồi bị đem đi tìm kiếm như một câu hỏi thật.
+        // Độ dài câu trả về vẫn bị chặn ở bước sanitize nên nâng giới hạn không làm câu viết lại dài ra.
+        maxOutputTokens: 1024,
       }),
       REWRITE_TIMEOUT_MS,
     );

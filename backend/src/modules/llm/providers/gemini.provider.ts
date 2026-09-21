@@ -71,6 +71,69 @@ function isQuotaError(message: string): boolean {
   return /429|RESOURCE_EXHAUSTED|quota/i.test(message);
 }
 
+/**
+ * Lỗi QUÁ TẢI TẠM THỜI phía Google (503 UNAVAILABLE, "high demand") — khác hẳn hết quota: key vẫn
+ * còn hạn mức, chỉ là model đang bị gọi quá đông. Đổi key vô ích vì quá tải tính theo MODEL chứ
+ * không theo key; cách đúng là chờ chút rồi gọi lại, vẫn quá tải thì chuyển sang bản nhẹ hơn.
+ *
+ * Đo thực tế 21/09/2026: gemini-3.6-flash trả 503 xen kẽ khoảng 1/3 số lần gọi, trong khi cổng dự
+ * phòng `custom` đang hỏng key — thiếu bước này là người dùng nhận thẳng "Lỗi máy chủ nội bộ".
+ */
+function isOverloadError(message: string): boolean {
+  return /\b503\b|UNAVAILABLE|overloaded|high demand/i.test(message);
+}
+
+/** Thời gian chờ trước mỗi lần gọi lại model chính khi quá tải — tổng cộng thêm tối đa ~4,5 giây. */
+const OVERLOAD_RETRY_DELAYS_MS = [1500, 3000];
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Gọi Gemini bằng MỘT key: model chính (gọi lại khi quá tải) → vẫn quá tải thì bản nhẹ dự phòng
+ * `GEMINI_FALLBACK_MODEL`. Trả kèm tên model THỰC SỰ đã trả lời để thống kê token ghi đúng.
+ *
+ * Lỗi hết quota được ném nguyên trạng để vòng lặp key bên ngoài chuyển sang key kế tiếp; quá tải
+ * tới cả bản nhẹ thì ném ProviderCallError để llm.service chuyển sang provider khác.
+ */
+async function generateWithOverloadFallback(client: GoogleGenAI, params: ChatParams) {
+  const models = [...new Set([params.model, env.GEMINI_FALLBACK_MODEL])];
+
+  for (let m = 0; m < models.length; m++) {
+    const retryDelays = m === 0 ? OVERLOAD_RETRY_DELAYS_MS : [];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const response = await client.models.generateContent({
+          model: models[m] as string,
+          config: {
+            // systemInstruction tách riêng khỏi contents — hàng rào chống prompt injection từ nội dung KB
+            systemInstruction: params.systemPrompt,
+            temperature: params.temperature,
+            maxOutputTokens: params.maxOutputTokens,
+          },
+          contents: params.userMessage,
+        });
+        return { response, model: models[m] as string };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (!isOverloadError(message)) throw err;
+
+        if (attempt < retryDelays.length) {
+          const delay = retryDelays[attempt] as number;
+          console.warn(`[Gemini] ${models[m]} quá tải — gọi lại sau ${delay / 1000}s`);
+          await sleep(delay);
+          continue;
+        }
+        if (m === models.length - 1) throw new ProviderCallError("gemini", message);
+        console.warn(`[Gemini] ${models[m]} vẫn quá tải — chuyển sang bản nhẹ ${models[m + 1]}`);
+        break;
+      }
+    }
+  }
+
+  // Không tới được đây: vòng lặp trên luôn return hoặc throw
+  throw new ProviderCallError("gemini", "Không gọi được model Gemini nào");
+}
+
 export const geminiProvider: ChatProvider = {
   id: "gemini",
   label: "Google Gemini",
@@ -111,13 +174,7 @@ export const geminiProvider: ChatProvider = {
     }
   },
 
-  async generate({
-    systemPrompt,
-    userMessage,
-    model,
-    temperature,
-    maxOutputTokens,
-  }: ChatParams): Promise<ChatResult> {
+  async generate(params: ChatParams): Promise<ChatResult> {
     const apiKeys = getApiKeys();
     if (apiKeys.length === 0) {
       throw new ProviderCallError(
@@ -130,16 +187,7 @@ export const geminiProvider: ChatProvider = {
 
     for (let i = 0; i < apiKeys.length; i++) {
       try {
-        const response = await getClient(apiKeys[i]).models.generateContent({
-          model,
-          config: {
-            // systemInstruction tách riêng khỏi contents — hàng rào chống prompt injection từ nội dung KB
-            systemInstruction: systemPrompt,
-            temperature,
-            maxOutputTokens,
-          },
-          contents: userMessage,
-        });
+        const { response, model } = await generateWithOverloadFallback(getClient(apiKeys[i]), params);
 
         const text = response.text;
         if (!text)
@@ -147,7 +195,7 @@ export const geminiProvider: ChatProvider = {
 
         if (i > 0)
           console.warn(`[Gemini] Đã trả lời bằng key dự phòng #${i + 1}`);
-        return { text, usage: extractUsage(response.usageMetadata) };
+        return { text, usage: extractUsage(response.usageMetadata), model };
       } catch (err) {
         if (err instanceof ProviderCallError) throw err;
 

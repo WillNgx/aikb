@@ -183,7 +183,7 @@ export async function callChatModel(options: ChatCallOptions): Promise<string> {
       // Ghi thống kê token ở ĐÂY chứ không ở ai.service: chỉ chỗ này mới biết provider/model nào
       // thực sự trả lời (có thể là provider dự phòng, khác với cấu hình Admin chọn).
       // Fire-and-forget — recordTokenUsage tự nuốt lỗi, thống kê không bao giờ chặn câu trả lời.
-      if (result.usage) void recordTokenUsage(provider.id, model, result.usage);
+      if (result.usage) void recordTokenUsage(provider.id, result.model ?? model, result.usage);
 
       // Đã phải fallback — ghi log để Admin biết provider chính đang có vấn đề
       if (provider.id !== config.providerId) {

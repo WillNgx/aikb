@@ -48,6 +48,11 @@ export interface ChatResult {
    * Cố ý để optional: thiếu số liệu thống kê thì bỏ qua, không được làm hỏng câu trả lời.
    */
   usage?: ChatTokenUsage;
+  /**
+   * Model THỰC SỰ đã trả lời, khi provider tự đổi model bên trong (vd Gemini quá tải → chuyển sang
+   * bản nhẹ). Không có thì hiểu là đúng model đã yêu cầu.
+   */
+  model?: string;
 }
 
 export interface ChatProvider {

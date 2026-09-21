@@ -17,6 +17,9 @@ const envSchema = z.object({
   // đúng model này). Nếu Google tiếp tục nâng cấp, alias tự cập nhật 'gemini-flash-latest' cũng
   // hoạt động — nhưng Google khuyến cáo ghim version cụ thể cho production thay vì dùng "-latest".
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
+  // Bản Gemini NHẸ dùng khi model chính báo quá tải (503) kéo dài — xem gemini.provider.ts. Ghim
+  // phiên bản cụ thể thay vì alias "-latest"; đã thử 21/09/2026: trả lời ~1s, không tốn token suy nghĩ.
+  GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
   // Cổng trung chuyển (relay) tự chọn — hiện trỏ tới gateway.agents.ai.vn, một bản new-api gộp
   // nhiều nhà cung cấp sau một endpoint chuẩn OpenAI. Đặt tên CUSTOM_ thay vì tên cổng cụ thể để
   // đổi nhà cung cấp sau này chỉ phải sửa baseUrl, không phải đổi tên biến env.
