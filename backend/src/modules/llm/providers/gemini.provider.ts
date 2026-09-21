@@ -89,7 +89,18 @@ const OVERLOAD_RETRY_DELAYS_MS = [1500, 3000];
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
- * Gọi Gemini bằng MỘT key: model chính (gọi lại khi quá tải) → vẫn quá tải thì bản nhẹ dự phòng
+ * Quá tải không phải lúc nào cũng trả 503 — nhiều khi model chỉ TREO không trả lời (đo 21/09/2026:
+ * gemini-3.6-flash treo quá 60s trong khi bản nhẹ trả lời trong ~3s). Không đặt giới hạn thì người
+ * dùng ngồi nhìn "Đang soạn câu trả lời..." mãi mãi. Model chính quá 25s thì bỏ, sang thẳng bản nhẹ
+ * (không gọi lại model đang treo — chờ thêm vô ích). Câu trả lời bình thường chỉ mất vài giây.
+ */
+const PRIMARY_TIMEOUT_MS = 25_000;
+/** Bản nhẹ thường trả lời trong 1–3s; vẫn phải có giới hạn để không bao giờ treo vô hạn. */
+const FALLBACK_TIMEOUT_MS = 30_000;
+
+/**
+ * Gọi Gemini bằng MỘT key: model chính (gọi lại khi báo 503; treo quá PRIMARY_TIMEOUT_MS thì bỏ
+ * luôn) → vẫn quá tải thì bản nhẹ dự phòng
  * `GEMINI_FALLBACK_MODEL`. Trả kèm tên model THỰC SỰ đã trả lời để thống kê token ghi đúng.
  *
  * Lỗi hết quota được ném nguyên trạng để vòng lặp key bên ngoài chuyển sang key kế tiếp; quá tải
@@ -101,6 +112,7 @@ async function generateWithOverloadFallback(client: GoogleGenAI, params: ChatPar
   for (let m = 0; m < models.length; m++) {
     const retryDelays = m === 0 ? OVERLOAD_RETRY_DELAYS_MS : [];
     for (let attempt = 0; ; attempt++) {
+      const signal = AbortSignal.timeout(m === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_TIMEOUT_MS);
       try {
         const response = await client.models.generateContent({
           model: models[m] as string,
@@ -109,12 +121,24 @@ async function generateWithOverloadFallback(client: GoogleGenAI, params: ChatPar
             systemInstruction: params.systemPrompt,
             temperature: params.temperature,
             maxOutputTokens: params.maxOutputTokens,
+            abortSignal: signal,
           },
           contents: params.userMessage,
         });
         return { response, model: models[m] as string };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+
+        // Treo quá giới hạn thời gian → coi như quá tải nhưng KHÔNG gọi lại model đó nữa
+        if (signal.aborted) {
+          const seconds = (m === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_TIMEOUT_MS) / 1000;
+          if (m === models.length - 1) {
+            throw new ProviderCallError("gemini", `${models[m]} không phản hồi sau ${seconds}s`);
+          }
+          console.warn(`[Gemini] ${models[m]} không phản hồi sau ${seconds}s — chuyển sang bản nhẹ ${models[m + 1]}`);
+          break;
+        }
+
         if (!isOverloadError(message)) throw err;
 
         if (attempt < retryDelays.length) {
