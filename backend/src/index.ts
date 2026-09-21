@@ -56,6 +56,14 @@ app.use(
 app.use(express.json({ limit: '8mb' })); // TipTap JSON + ảnh base64 (upload) có thể lớn
 app.use(express.urlencoded({ extended: true }));
 
+// ─── Health Check ─────────────────────────────────────────────────────────────
+// Đặt TRƯỚC rate limiter: health check của Render và job self-ping (jobs/selfPing.ts) gọi route này
+// định kỳ từ cùng một IP — bị tính vào giới hạn chung thì có lúc nhận 429, Render tưởng server chết
+// và khởi động lại liên tục. Route này không đọc DB, không có gì để lạm dụng.
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ─── Rate Limiting (global) ───────────────────────────────────────────────────
 app.use(generalLimiter);
 
@@ -63,11 +71,6 @@ app.use(generalLimiter);
 // Mắc TOÀN CỤC và đặt TRƯỚC mọi route: mở ngữ cảnh KB cho toàn bộ chuỗi xử lý phía sau, để
 // service không phải luồn thêm tham số kbCode qua hơn 70 điểm truy vấn. Xem middleware/resolveKb.ts.
 app.use(resolveKb);
-
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);

@@ -6,7 +6,9 @@
     "dev:be": "npm --prefix backend run dev",
     "dev:fe": "npm --prefix frontend run dev",
     "dev": "npx -y concurrently \"npm run dev:be\" \"npm run dev:fe\"",
-
     "build": "npm --prefix backend run build && npm --prefix frontend run build"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
