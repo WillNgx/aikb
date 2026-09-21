@@ -30,14 +30,15 @@ import { startTelegramBot } from './modules/telegram/telegram.bot';
 const app = express();
 
 // ─── Reverse Proxy ────────────────────────────────────────────────────────────
-// Trên Render request đi qua ĐÚNG 2 lớp proxy: Cloudflare (nối IP thật của client vào
-// X-Forwarded-For) rồi tới bộ cân bằng tải của Render (nối tiếp IP của nút Cloudflare). Vì vậy phải
-// tin 2 hop thì `req.ip` mới là IP người dùng. Đặt `1` như trước thì `req.ip` là IP nút Cloudflare
-// — đã đo trên production 21/09/2026: cùng một máy mà request rơi ngẫu nhiên vào 2 bộ đếm khác
-// nhau, tức cả công ty dùng chung vài bộ đếm rate-limit và dễ bị 429 oan.
+// Trên Render request đi qua ĐÚNG 3 lớp proxy (đo trực tiếp trên production 21/09/2026):
+//   client → Cloudflare → bộ cân bằng tải Render (10.x) → proxy nội bộ trong container (::1) → app
+// X-Forwarded-For app nhận được là "<ip giả nếu có>, <IP thật>, <IP nút Cloudflare>, <10.x>". Tin
+// đúng 3 hop thì `req.ip` là IP thật; giá trị client tự chèn luôn nằm bên trái nên không giả được.
+// Đặt 1 hoặc 2 thì `req.ip` là IP nút Cloudflare (đổi luân phiên giữa vài IP) — cả công ty dùng chung
+// vài bộ đếm rate-limit và dễ bị 429 oan.
 // KHÔNG đặt `true` (tin mọi hop): khi đó giá trị X-Forwarded-For do chính client tự gửi cũng được
 // tin, cho phép giả IP để lách rate-limit. Đổi nơi deploy (thêm/bớt proxy) thì phải đo lại số hop.
-app.set('trust proxy', 2);
+app.set('trust proxy', 3);
 
 // ─── Security Headers ────────────────────────────────────────────────────────
 app.use(helmet());
@@ -63,11 +64,7 @@ app.use(express.urlencoded({ extended: true }));
 // Đặt TRƯỚC rate limiter: health check của Render và job self-ping (jobs/selfPing.ts) gọi route này
 // định kỳ từ cùng một IP — bị tính vào giới hạn chung thì có lúc nhận 429, Render tưởng server chết
 // và khởi động lại liên tục. Route này không đọc DB, không có gì để lạm dụng.
-app.get('/health', (req, res) => {
-  // TẠM THỜI — đo số lớp proxy thật trên Render để đặt đúng `trust proxy`. Gỡ ngay sau khi đo.
-  if (req.query.diag === '4c64ab29e0a1e5bf') {
-    console.log('[DIAG]', JSON.stringify({ xff: req.headers['x-forwarded-for'], cf: req.headers['cf-connecting-ip'], tci: req.headers['true-client-ip'], xri: req.headers['x-real-ip'], ip: req.ip, ips: req.ips, remote: req.socket.remoteAddress }));
-  }
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
