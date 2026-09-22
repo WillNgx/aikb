@@ -70,19 +70,19 @@ function assertCanManageUser(actor: AuthUser, target: { role: string; defaultKb:
   if (actor.role === 'super_admin') return;
 
   if (target.role !== 'user') {
-    throw new AppError(403, 'Chỉ Quản trị hệ thống mới được thao tác trên tài khoản quản trị');
+    throw new AppError(403, 'Only System administrators can manage administrator accounts');
   }
   if (target.defaultKb !== actor.defaultKb) {
     throw new AppError(
       403,
-      `Tài khoản này thuộc Knowledge Base "${target.defaultKb}", bạn chỉ quản lý được tài khoản của "${actor.defaultKb}"`
+      `This account belongs to Knowledge Base "${target.defaultKb}"; you can only manage accounts of "${actor.defaultKb}"`
     );
   }
 }
 
 const createUserSchema = z.object({
-  email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
+  email: z.string().email('Invalid email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['super_admin', 'admin', 'user']).default('user'),
   // Bỏ trống thì lấy theo KB của người tạo — Quản trị KB không cần (và không được) chọn.
   defaultKb: z.string().min(1).optional(),
@@ -121,14 +121,14 @@ router.post('/users', authenticate, requireAdmin, validateBody(createUserSchema)
 
     const laSuper = actor.role === 'super_admin';
     if (!laSuper && body.role !== 'user') {
-      throw new AppError(403, 'Bạn chỉ được tạo tài khoản Người dùng');
+      throw new AppError(403, 'You can only create User accounts');
     }
 
     const role = laSuper ? body.role : 'user';
     const defaultKb = laSuper ? body.defaultKb ?? actor.defaultKb : actor.defaultKb;
 
     if (laSuper && !(await isValidKb(defaultKb))) {
-      throw new AppError(400, `Knowledge Base "${defaultKb}" không tồn tại hoặc đã tắt`);
+      throw new AppError(400, `Knowledge Base "${defaultKb}" does not exist or is disabled`);
     }
 
     // Tạo user trong Supabase Auth
@@ -139,7 +139,7 @@ router.post('/users', authenticate, requireAdmin, validateBody(createUserSchema)
     });
 
     if (error || !data.user) {
-      res.status(400).json({ error: error?.message ?? 'Tạo user thất bại' });
+      res.status(400).json({ error: error?.message ?? 'Failed to create the user' });
       return;
     }
 
@@ -176,7 +176,7 @@ router.patch('/users/:id/enable', authenticate, requireAdmin, async (req, res, n
     const userId = req.params.id as string;
 
     const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!target) throw notFound('User không tồn tại');
+    if (!target) throw notFound('User not found');
     assertCanManageUser(req.user!, target);
 
     const [updated] = await db
@@ -185,7 +185,7 @@ router.patch('/users/:id/enable', authenticate, requireAdmin, async (req, res, n
       .where(eq(users.id, userId))
       .returning();
 
-    if (!updated) { res.status(404).json({ error: 'User không tồn tại' }); return; }
+    if (!updated) { res.status(404).json({ error: 'User not found' }); return; }
 
     await db.insert(auditLogs).values({
       action: 'user_enable',
@@ -204,12 +204,12 @@ router.patch('/users/:id/disable', authenticate, requireAdmin, async (req, res, 
   try {
     const userId = req.params.id as string;
     if (userId === req.user!.id) {
-      res.status(400).json({ error: 'Không thể tự vô hiệu hóa tài khoản của chính mình' });
+      res.status(400).json({ error: 'You cannot disable your own account' });
       return;
     }
 
     const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!target) throw notFound('User không tồn tại');
+    if (!target) throw notFound('User not found');
     assertCanManageUser(req.user!, target);
 
     // Chặn khoá mất Quản trị hệ thống cuối cùng — xem countOtherEnabledSuperAdmins
@@ -219,7 +219,7 @@ router.patch('/users/:id/disable', authenticate, requireAdmin, async (req, res, 
       (await countOtherEnabledSuperAdmins(userId)) === 0
     ) {
       throw businessRuleViolation(
-        'Không thể vô hiệu hoá Quản trị hệ thống cuối cùng đang hoạt động — hệ thống sẽ không còn ai quản trị được.',
+        'Cannot disable the last active System administrator — nobody would be left to administer the system.',
         'LAST_ADMIN'
       );
     }
@@ -259,17 +259,17 @@ router.delete('/users/:id', authenticate, requireAdmin, async (req, res, next) =
     const userId = req.params.id as string;
 
     if (userId === req.user!.id) {
-      throw new AppError(400, 'Không thể tự xoá tài khoản của chính mình');
+      throw new AppError(400, 'You cannot delete your own account');
     }
 
     const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!target) throw notFound('User không tồn tại');
+    if (!target) throw notFound('User not found');
     assertCanManageUser(req.user!, target);
 
     // Chặn xoá mất Quản trị hệ thống cuối cùng — xem countOtherEnabledSuperAdmins
     if (target.role === 'super_admin' && (await countOtherEnabledSuperAdmins(userId)) === 0) {
       throw businessRuleViolation(
-        'Không thể xoá Quản trị hệ thống cuối cùng đang hoạt động — hệ thống sẽ không còn ai quản trị được.',
+        'Cannot delete the last active System administrator — nobody would be left to administer the system.',
         'LAST_ADMIN'
       );
     }
@@ -281,7 +281,7 @@ router.delete('/users/:id', authenticate, requireAdmin, async (req, res, next) =
     // Không còn ở Auth (đã bị xoá tay từ trước) thì vẫn cho xoá tiếp row `users` để dọn sạch.
     const authMissing = !!authError && /not.*found/i.test(authError.message);
     if (authError && !authMissing) {
-      throw new AppError(502, `Không xoá được tài khoản ở Supabase Auth: ${authError.message}`);
+      throw new AppError(502, `Could not delete the account in Supabase Auth: ${authError.message}`);
     }
 
     await db.delete(users).where(eq(users.id, userId));
@@ -317,11 +317,11 @@ router.patch(
       const { role } = req.body as { role: 'super_admin' | 'admin' | 'user' };
 
       if (userId === req.user!.id) {
-        throw new AppError(400, 'Không thể tự đổi vai trò của chính mình');
+        throw new AppError(400, 'You cannot change your own role');
       }
 
       const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      if (!target) throw notFound('User không tồn tại');
+      if (!target) throw notFound('User not found');
 
       // Hạ cấp Quản trị hệ thống cuối cùng cũng nguy hiểm y như xoá — chặn cùng một lý do.
       if (
@@ -330,7 +330,7 @@ router.patch(
         (await countOtherEnabledSuperAdmins(userId)) === 0
       ) {
         throw businessRuleViolation(
-          'Không thể hạ cấp Quản trị hệ thống cuối cùng đang hoạt động — hệ thống sẽ không còn ai quản trị được.',
+          'Cannot demote the last active System administrator — nobody would be left to administer the system.',
           'LAST_ADMIN'
         );
       }
@@ -375,11 +375,11 @@ router.patch(
       const { defaultKb } = req.body as { defaultKb: string };
 
       if (!(await isValidKb(defaultKb))) {
-        throw new AppError(400, `Knowledge Base "${defaultKb}" không tồn tại hoặc đã tắt`);
+        throw new AppError(400, `Knowledge Base "${defaultKb}" does not exist or is disabled`);
       }
 
       const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      if (!target) throw notFound('User không tồn tại');
+      if (!target) throw notFound('User not found');
 
       const [updated] = await db
         .update(users)
@@ -513,7 +513,7 @@ router.get('/keep-alive', authenticate, requireAdmin, async (req, res, next) => 
 // ─── Relevance Threshold Settings (Admin Config) ─────────────────────────────
 
 const thresholdSchema = z.object({
-  threshold: z.number().min(0.05, 'Ngưỡng tối thiểu là 0.05').max(1.0, 'Ngưỡng tối đa là 1.0'),
+  threshold: z.number().min(0.05, 'Minimum threshold is 0.05').max(1.0, 'Maximum threshold is 1.0'),
 });
 
 /** GET /api/admin/settings/threshold — lấy ngưỡng hiện tại */
@@ -552,7 +552,7 @@ router.patch('/settings/threshold', authenticate, requireAdmin, validateBody(thr
 // để trả lời (xem MAX_CONTEXT_CHUNKS trong ai.service.ts).
 
 const relatedLinksCountSchema = z.object({
-  count: z.number().int().min(1, 'Tối thiểu 1 link').max(5, 'Tối đa 5 link'),
+  count: z.number().int().min(1, 'At least 1 link').max(5, 'At most 5 links'),
 });
 
 /** GET /api/admin/settings/related-links-count — lấy số lượng link hiện tại */
@@ -598,13 +598,13 @@ const rateLimitSchema = z.object({
   aiChatLimit: z
     .number()
     .int()
-    .min(AI_CHAT_LIMIT_RANGE.min, `Giới hạn AI Chat tối thiểu là ${AI_CHAT_LIMIT_RANGE.min}`)
-    .max(AI_CHAT_LIMIT_RANGE.max, `Giới hạn AI Chat tối đa là ${AI_CHAT_LIMIT_RANGE.max}`),
+    .min(AI_CHAT_LIMIT_RANGE.min, `AI Chat limit must be at least ${AI_CHAT_LIMIT_RANGE.min}`)
+    .max(AI_CHAT_LIMIT_RANGE.max, `AI Chat limit must be at most ${AI_CHAT_LIMIT_RANGE.max}`),
   generalLimit: z
     .number()
     .int()
-    .min(GENERAL_LIMIT_RANGE.min, `Giới hạn chung tối thiểu là ${GENERAL_LIMIT_RANGE.min}`)
-    .max(GENERAL_LIMIT_RANGE.max, `Giới hạn chung tối đa là ${GENERAL_LIMIT_RANGE.max}`),
+    .min(GENERAL_LIMIT_RANGE.min, `General limit must be at least ${GENERAL_LIMIT_RANGE.min}`)
+    .max(GENERAL_LIMIT_RANGE.max, `General limit must be at most ${GENERAL_LIMIT_RANGE.max}`),
 });
 
 /** GET /api/admin/settings/rate-limit — giới hạn hiện tại + khoảng cho phép để FE dựng form */
@@ -654,13 +654,13 @@ router.patch(
 // giờ nhận được giá trị key.
 
 const aiProviderSchema = z.object({
-  provider: z.string().refine(isChatProviderId, 'Provider không hợp lệ'),
-  model: z.string().trim().min(1, 'Model không được để trống').max(200, 'Model quá dài'),
+  provider: z.string().refine(isChatProviderId, 'Invalid provider'),
+  model: z.string().trim().min(1, 'Model is required').max(200, 'Model name is too long'),
 });
 
 const aiProviderTestSchema = z.object({
-  provider: z.string().refine(isChatProviderId, 'Provider không hợp lệ'),
-  model: z.string().trim().max(200, 'Model quá dài').optional(),
+  provider: z.string().refine(isChatProviderId, 'Invalid provider'),
+  model: z.string().trim().max(200, 'Model name is too long').optional(),
 });
 
 /** GET /api/admin/settings/ai-provider — cấu hình hiện tại + trạng thái từng provider */
@@ -717,7 +717,7 @@ router.post(
       // lỗi hệ thống — trả 400 kèm nguyên nhân để hiển thị thẳng trên UI.
       res.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : 'Không gọi được provider',
+        error: err instanceof Error ? err.message : 'Could not call the provider',
       });
     }
   }
@@ -735,7 +735,7 @@ router.get('/settings/ai-provider/models', authenticate, requireAdmin, async (re
   try {
     const provider = String(req.query.provider ?? '');
     if (!isChatProviderId(provider)) {
-      res.status(400).json({ error: 'Provider không hợp lệ' });
+      res.status(400).json({ error: 'Invalid provider' });
       return;
     }
 
@@ -745,7 +745,7 @@ router.get('/settings/ai-provider/models', authenticate, requireAdmin, async (re
     // Cùng lý do với endpoint /test: đây là lỗi cấu hình (thiếu key, key sai, cổng chết) nên trả
     // 400 kèm nguyên nhân để hiện thẳng cho Admin, không phải lỗi hệ thống
     res.status(400).json({
-      error: err instanceof Error ? err.message : 'Không lấy được danh sách model',
+      error: err instanceof Error ? err.message : 'Could not load the model list',
     });
   }
 });
@@ -753,32 +753,32 @@ router.get('/settings/ai-provider/models', authenticate, requireAdmin, async (re
 // ─── Custom AI Gateways Management ──────────────────────────────────────────
 
 const createCustomGatewaySchema = z.object({
-  name: z.string().trim().min(1, 'Tên cổng không được để trống').max(100, 'Tên quá dài'),
-  baseUrl: z.string().trim().url('Base URL không hợp lệ (cần bắt đầu bằng http:// hoặc https://)'),
-  apiKey: z.string().trim().min(1, 'API Key không được để trống'),
-  defaultModel: z.string().trim().min(1, 'Model mặc định không được để trống').max(200),
+  name: z.string().trim().min(1, 'Gateway name is required').max(100, 'Name is too long'),
+  baseUrl: z.string().trim().url('Invalid Base URL (must start with http:// or https://)'),
+  apiKey: z.string().trim().min(1, 'API Key is required'),
+  defaultModel: z.string().trim().min(1, 'Default model is required').max(200),
   suggestedModels: z.array(z.string().trim()).optional(),
   isActive: z.boolean().optional(),
 });
 
 const updateCustomGatewaySchema = z.object({
-  name: z.string().trim().min(1, 'Tên cổng không được để trống').max(100, 'Tên quá dài').optional(),
-  baseUrl: z.string().trim().url('Base URL không hợp lệ (cần bắt đầu bằng http:// hoặc https://)').optional(),
+  name: z.string().trim().min(1, 'Gateway name is required').max(100, 'Name is too long').optional(),
+  baseUrl: z.string().trim().url('Invalid Base URL (must start with http:// or https://)').optional(),
   apiKey: z.string().trim().optional(),
-  defaultModel: z.string().trim().min(1, 'Model mặc định không được để trống').max(200).optional(),
+  defaultModel: z.string().trim().min(1, 'Default model is required').max(200).optional(),
   suggestedModels: z.array(z.string().trim()).optional(),
   isActive: z.boolean().optional(),
 });
 
 const testDirectGatewaySchema = z.object({
-  baseUrl: z.string().trim().url('Base URL không hợp lệ'),
-  apiKey: z.string().trim().min(1, 'API Key không được để trống'),
-  model: z.string().trim().min(1, 'Model không được để trống'),
+  baseUrl: z.string().trim().url('Invalid Base URL'),
+  apiKey: z.string().trim().min(1, 'API Key is required'),
+  model: z.string().trim().min(1, 'Model is required'),
 });
 
 const listDirectModelsSchema = z.object({
-  baseUrl: z.string().trim().url('Base URL không hợp lệ'),
-  apiKey: z.string().trim().min(1, 'API Key không được để trống'),
+  baseUrl: z.string().trim().url('Invalid Base URL'),
+  apiKey: z.string().trim().min(1, 'API Key is required'),
 });
 
 /** GET /api/admin/settings/ai-gateways — Danh sách các cổng custom đã lưu */
@@ -878,7 +878,7 @@ router.post(
     } catch (err) {
       res.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : 'Không gọi được cổng AI custom',
+        error: err instanceof Error ? err.message : 'Could not call the custom AI gateway',
       });
     }
   }
@@ -897,7 +897,7 @@ router.post(
     } catch (err) {
       res.status(400).json({
         ok: false,
-        error: err instanceof Error ? err.message : 'Không lấy được danh sách model',
+        error: err instanceof Error ? err.message : 'Could not load the model list',
       });
     }
   }

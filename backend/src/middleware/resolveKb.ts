@@ -28,7 +28,7 @@ export async function resolveKb(req: Request, res: Response, next: NextFunction)
     const code = fromHeader || req.user?.defaultKb || DEFAULT_KB_CODE;
 
     if (fromHeader && !(await isValidKb(fromHeader))) {
-      res.status(400).json({ error: `Knowledge Base "${fromHeader}" không tồn tại hoặc đã tắt` });
+      res.status(400).json({ error: `Knowledge Base "${fromHeader}" does not exist or is disabled` });
       return;
     }
 

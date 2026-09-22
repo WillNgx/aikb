@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { applyTheme, getInitialTheme } from './lib/theme';
 import { setupI18n } from './lib/i18n';
+// Font Awesome 4.7 tự host (không dùng CDN) để CSP giữ nguyên `self`. Nạp TRƯỚC index.css để style
+// của app đè được lên style mặc định của thư viện.
+import 'font-awesome/css/font-awesome.min.css';
 import './index.css';
 
 // Áp theme TRƯỚC khi render để tránh nháy màu, và để trang Đăng nhập (nằm ngoài AppLayout)

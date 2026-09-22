@@ -391,7 +391,7 @@ function DetailModal({
 
         <div className="promo-modal-foot">
           <button type="button" className="btn-primary-custom" onClick={onClose}>
-            Đóng
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -784,7 +784,7 @@ export default function PromotionsPage() {
                     onClick={() => setNamMo((v) => ({ ...v, [nam]: !v[nam] }))}
                   >
                     <span className={`promo-caret${namMo[nam] ? ' open' : ''}`}>▶</span>
-                    <span className="promo-label">Năm {nam}</span>
+                    <span className="promo-label">{t('promo.yearLabel', { year: nam })}</span>
                     <span className="promo-count">
                       {theoNam[nam].reduce((s, m) => s + m.soLuong, 0)}
                     </span>
@@ -819,7 +819,7 @@ export default function PromotionsPage() {
                 onClick={() => moThang(KHONG_HAN)}
               >
                 <span className="promo-caret" />
-                <span className="promo-label">Không giới hạn thời gian</span>
+                <span className="promo-label">{t('promo.noTimeLimit')}</span>
                 <span className="promo-count">{months.khongHan}</span>
               </button>
             )}

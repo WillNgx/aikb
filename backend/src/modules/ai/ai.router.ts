@@ -9,7 +9,7 @@ import { chat } from './ai.service';
 const router = Router();
 
 const chatSchema = z.object({
-  question: z.string().min(1, 'Câu hỏi bắt buộc').max(2000, 'Câu hỏi tối đa 2000 ký tự'),
+  question: z.string().min(1, 'Question is required').max(2000, 'Question must be at most 2000 characters'),
   // Lịch sử hội thoại do client gửi (web lưu trong sessionStorage theo TỪNG TAB — xem
   // sanitizeClientHistory trong contextHistory.service). Cắt cứng 8 phần tử ở đây chỉ để chặn
   // payload rác; service vẫn lọc lại theo cửa sổ 15 phút rồi mới giữ 4 câu gần nhất.
@@ -93,7 +93,7 @@ router.post(
 
       const e = err as Error & { aiName?: string; code?: string };
       send('error', {
-        error: err instanceof AppError ? err.message : 'Lỗi máy chủ nội bộ',
+        error: err instanceof AppError ? err.message : 'Internal server error',
         ...(e.aiName && { aiName: e.aiName }),
         ...(e.code && { code: e.code }),
       });

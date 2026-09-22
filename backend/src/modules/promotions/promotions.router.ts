@@ -30,7 +30,7 @@ router.get('/', async (req, res, next) => {
   try {
     const month = String(req.query.month ?? '').trim();
     if (!month) {
-      res.status(400).json({ error: 'Thiếu tham số month' });
+      res.status(400).json({ error: 'Missing month parameter' });
       return;
     }
     res.json({ items: await listByMonth(month) });

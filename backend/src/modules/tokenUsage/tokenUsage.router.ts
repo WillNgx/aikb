@@ -54,14 +54,14 @@ router.get(
 const deleteQuerySchema = z
   .object({
     /** Ngày cụ thể 'YYYY-MM-DD'. */
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có dạng YYYY-MM-DD').optional(),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
     /** Tháng cụ thể 'YYYY-MM'. */
-    month: z.string().regex(/^\d{4}-\d{2}$/, 'Tháng phải có dạng YYYY-MM').optional(),
+    month: z.string().regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format').optional(),
     /** Bắt buộc gõ đúng 'all' để xoá sạch — tránh xoá nhầm toàn bộ khi thiếu tham số. */
     scope: z.literal('all').optional(),
   })
   .refine((v) => !(v.date && v.month), {
-    message: 'Chỉ được chọn một trong hai: date hoặc month',
+    message: 'Choose only one: date or month',
   });
 
 /**
@@ -92,7 +92,7 @@ router.delete(
         deleted = await deleteAllUsage();
         target = 'all';
       } else {
-        throw new AppError(400, 'Cần chỉ định date, month hoặc scope=all');
+        throw new AppError(400, 'Specify date, month or scope=all');
       }
 
       // targetId để null vì dữ liệu thống kê không gắn với entity UUID nào

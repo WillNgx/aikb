@@ -37,6 +37,9 @@ services:
         sync: false
       - key: CUSTOM_API_KEY
         sync: false
+      # Anthropic Claude — chỉ dùng khi Admin chọn Claude ở trang Cấu hình AI
+      - key: ANTHROPIC_API_KEY
+        sync: false
       # ⚠️ Bot Telegram chỉ được chạy ở ĐÚNG MỘT nơi: điền token ở đây thì phải bỏ token khỏi .env ở
       # máy dev, nếu không hai nơi tranh nhau nhận tin và Telegram ngắt một bên (bot chết im lặng).
       - key: TELEGRAM_BOT_TOKEN

@@ -25,6 +25,22 @@ const ACTION_LABELS: Record<string, { labelKey: string; icon: string; color: str
   user_disable:      { labelKey: 'audit.actions.userDisable',      icon: '🔒', color: 'var(--color-danger)' },
   promotion_import:  { labelKey: 'audit.actions.promotionImport',  icon: '🎁', color: 'var(--color-primary)' },
   promotion_provider_edit: { labelKey: 'audit.actions.promotionProviderEdit', icon: '🏷', color: 'var(--color-warning)' },
+  system_prompt_edit: { labelKey: 'audit.actions.systemPromptEdit', icon: '💬', color: 'var(--color-warning)' },
+  user_delete:       { labelKey: 'audit.actions.userDelete',       icon: '🗑',  color: 'var(--color-danger)' },
+  // node_* = thao tác trên cây Thư mục/Bài viết (nodes.service.ts); node_move gồm cả kéo thả sắp xếp
+  node_create:       { labelKey: 'audit.actions.nodeCreate',       icon: '📝', color: 'var(--color-primary)' },
+  node_edit:         { labelKey: 'audit.actions.nodeEdit',         icon: '✏️', color: 'var(--color-warning)' },
+  node_delete:       { labelKey: 'audit.actions.nodeDelete',       icon: '🗑',  color: 'var(--color-danger)' },
+  node_move:         { labelKey: 'audit.actions.nodeMove',         icon: '↕️', color: 'var(--color-primary)' },
+  node_publish:      { labelKey: 'audit.actions.nodePublish',      icon: '🚀', color: 'var(--color-success)' },
+  slang_create:      { labelKey: 'audit.actions.slangCreate',      icon: '🔤', color: 'var(--color-primary)' },
+  slang_edit:        { labelKey: 'audit.actions.slangEdit',        icon: '✏️', color: 'var(--color-warning)' },
+  slang_delete:      { labelKey: 'audit.actions.slangDelete',      icon: '🗑',  color: 'var(--color-danger)' },
+  telegram_approve:  { labelKey: 'audit.actions.telegramApprove',  icon: '✅', color: 'var(--color-success)' },
+  telegram_reject:   { labelKey: 'audit.actions.telegramReject',   icon: '⛔', color: 'var(--color-danger)' },
+  telegram_revoke:   { labelKey: 'audit.actions.telegramRevoke',   icon: '🔒', color: 'var(--color-warning)' },
+  telegram_delete:   { labelKey: 'audit.actions.telegramDelete',   icon: '🗑',  color: 'var(--color-danger)' },
+  kb_create:         { labelKey: 'audit.actions.kbCreate',         icon: '🗂', color: 'var(--color-primary)' },
 };
 
 export default function AdminAuditPage() {

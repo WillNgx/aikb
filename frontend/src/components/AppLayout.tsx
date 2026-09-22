@@ -7,6 +7,8 @@ import AIChatWidget from './AIChatWidget';
 import { signOut } from '../lib/supabase';
 import KbSwitcher, { KbContextBanner } from './KbSwitcher';
 import { useTranslation } from 'react-i18next';
+import { changeLocale, LOCALE_NAMES } from '../lib/i18n';
+import { isVnKb } from '../lib/kb';
 
 interface User { id: string; email: string; role: 'super_admin' | 'admin' | 'user'; defaultKb: string; }
 
@@ -31,13 +33,42 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
 ];
 
 
+/**
+ * Lựa chọn thu gọn thanh bên của RIÊNG máy này (chỉ là tiện ích hiển thị) nên lưu localStorage.
+ * Bọc try/catch vì localStorage có thể bị chặn (chế độ riêng tư) — khi đó mặc định là mở.
+ */
+const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';
+
+function readSidebarCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export default function AppLayout({ children, user }: { children: React.ReactNode; user: User }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  // Nút ngôn ngữ hiện ngôn ngữ SẼ chuyển sang, giống nút theme hiện 🌙 khi đang ở theme Sáng.
+  const nextLocale = i18n.language === 'vi' ? 'en' : 'vi';
   // Theme đã được main.tsx áp dụng lúc khởi động (xem lib/theme.ts) — ở đây chỉ đọc lại để
   // biết đang ở chế độ nào mà hiển thị đúng biểu tượng nút.
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Thu gọn thanh bên trên MÁY TÍNH (người dùng chủ động bấm) — khác `sidebarOpen` là trạng thái
+  // mở menu trượt trên điện thoại.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+
+  const toggleSidebarCollapsed = () => {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+    } catch {
+      /* không lưu được thì chỉ mất việc nhớ lựa chọn, không ảnh hưởng thao tác */
+    }
+  };
 
   const toggleTheme = () => {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
@@ -54,9 +85,12 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
   };
 
   return (
-    <div className="app-shell">
-      {/* Sidebar */}
-      <nav className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Sidebar — `inert` khi đang thu gọn để phím Tab không nhảy vào các link đã bị ẩn */}
+      <nav
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        inert={sidebarCollapsed && !sidebarOpen}
+      >
         <div className="sidebar-brand-row">
           <NavLink to="/documents" className="sidebar-brand">
             <span className="brand-icon">🧠</span>
@@ -65,6 +99,18 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
               <span className="brand-subtitle">{t("layout.brandSubtitle")}</span>
             </div>
           </NavLink>
+          {/* Chỉ VNKB có nút EN/VI — KB khác giao diện luôn tiếng Anh (xem lib/i18n.ts) */}
+          {isVnKb() && (
+            <button
+              onClick={() => void changeLocale(nextLocale)}
+              title={LOCALE_NAMES[nextLocale]}
+              aria-label={LOCALE_NAMES[nextLocale]}
+              lang={nextLocale}
+              className="footer-btn lang-toggle-btn"
+            >
+              {nextLocale.toUpperCase()}
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             title={t("layout.toggleTheme")}
@@ -72,6 +118,15 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
             className="footer-btn theme-toggle-btn"
           >
             {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          <button
+            onClick={toggleSidebarCollapsed}
+            title={t("layout.collapseSidebar")}
+            aria-label={t("layout.collapseSidebar")}
+            aria-expanded={!sidebarCollapsed}
+            className="footer-btn sidebar-collapse-btn"
+          >
+            <i className="fa fa-angle-double-left" aria-hidden="true" />
           </button>
         </div>
 
@@ -164,8 +219,9 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
               {user.email}
             </div>
             <div className="user-role-badge">
-              <span className={`role-dot ${user.role}`} />
-              {user.role === 'admin' ? t("layout.roleAdmin") : t("layout.roleUser")}
+              {/* Quản trị hệ thống và Quản trị KB đều hiện chung nhãn Admin (quyết định của chủ dự án) */}
+              <span className={`role-dot ${user.role === 'user' ? 'user' : 'admin'}`} />
+              {user.role === 'user' ? t("layout.roleUser") : t("layout.roleAdmin")}
             </div>
           </div>
           <div className="user-action-buttons">
@@ -175,11 +231,24 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
               aria-label={t("layout.logout")}
               className="footer-btn logout-btn"
             >
-              🚪
+              <i className="fa fa-sign-out" aria-hidden="true" />
             </button>
           </div>
         </div>
       </nav>
+
+      {/* Nút mở lại thanh bên khi đã thu gọn — chỉ hiện trên máy tính (xem layout.css) */}
+      {sidebarCollapsed && (
+        <button
+          onClick={toggleSidebarCollapsed}
+          title={t("layout.expandSidebar")}
+          aria-label={t("layout.expandSidebar")}
+          aria-expanded={false}
+          className="sidebar-expand-btn"
+        >
+          <i className="fa fa-bars" aria-hidden="true" />
+        </button>
+      )}
 
       {/* Mobile overlay */}
       {sidebarOpen && (

@@ -40,7 +40,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Thiếu token xác thực' });
+    res.status(401).json({ error: 'Missing authentication token' });
     return;
   }
 
@@ -51,7 +51,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !supabaseUser) {
-      res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+      res.status(401).json({ error: 'Invalid or expired token' });
       return;
     }
 
@@ -63,12 +63,12 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       .limit(1);
 
     if (!appUser) {
-      res.status(401).json({ error: 'Tài khoản không tồn tại trong hệ thống' });
+      res.status(401).json({ error: 'This account does not exist in the system' });
       return;
     }
 
     if (!appUser.enabled) {
-      res.status(403).json({ error: 'Tài khoản đã bị vô hiệu hóa' });
+      res.status(403).json({ error: 'This account has been disabled' });
       return;
     }
 
@@ -88,11 +88,11 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     // phải bug — trả 503 để client biết là nên thử lại, thay vì 500 chung chung khiến mọi sự cố
     // mạng đều trông giống lỗi server.
     if (isTransientConnectionError(err)) {
-      res.status(503).json({ error: 'Hệ thống đang bận, vui lòng thử lại sau giây lát.' });
+      res.status(503).json({ error: 'The system is busy, please try again in a moment.' });
       return;
     }
 
-    res.status(500).json({ error: 'Lỗi máy chủ khi xác thực' });
+    res.status(500).json({ error: 'Server error during authentication' });
   }
 }
 

@@ -95,7 +95,7 @@ export function parseImportPayload(raw: unknown): ImportItem[] {
 
   if (!mang) {
     throw businessRuleViolation(
-      'File không đúng định dạng: cần một mảng khuyến mãi hoặc object có khoá "promotions".'
+      'Invalid file format: expected an array of promotions or an object with a "promotions" key.'
     );
   }
 
@@ -154,7 +154,7 @@ export async function previewImport(items: ImportItem[]): Promise<ImportDiff> {
   for (const item of items) {
     const c = chuanHoa(item, now);
     if (!c) {
-      diff.invalid.push({ title: item.title || '(không có tên)', reason: 'Thiếu tên hoặc nội dung' });
+      diff.invalid.push({ title: item.title || '(untitled)', reason: 'Missing title or content' });
       continue;
     }
     // File nguồn vẫn có thể lặp bản ghi — chỉ tính lần đầu để số liệu preview khớp với số dòng
@@ -185,7 +185,7 @@ export async function previewImport(items: ImportItem[]): Promise<ImportDiff> {
       title: item.title,
       provider: hienCo.providerLocked ? hienCo.provider : c.provider,
       versionLabel: c.label,
-      reason: 'Nội dung hoặc thời hạn đã thay đổi',
+      reason: 'Content or validity period changed',
     });
   }
 
@@ -213,7 +213,7 @@ export async function commitImport(
   const { promotions, promotionVersions } = kbTables();
   const dangChay = await getImportProgress();
   if (dangChay.status === 'running') {
-    throw businessRuleViolation('Đang có một lượt nhập dữ liệu chạy dở, vui lòng đợi lượt đó xong.');
+    throw businessRuleViolation('Another import is in progress, please wait for it to finish.');
   }
 
   const now = new Date();
@@ -224,7 +224,7 @@ export async function commitImport(
   for (const item of items) {
     const c = chuanHoa(item, now);
     if (!c) {
-      diff.invalid.push({ title: item.title || '(không có tên)', reason: 'Thiếu tên hoặc nội dung' });
+      diff.invalid.push({ title: item.title || '(untitled)', reason: 'Missing title or content' });
       continue;
     }
     if (daGap.has(c.titleKey)) {
@@ -445,15 +445,15 @@ async function timHoacTaoFolder(
 export async function mirrorPromotion(promotionId: string, actor: AuthUser): Promise<void> {
   const { nodes, promotions, promotionVersions } = kbTables();
   const [pr] = await db.select().from(promotions).where(eq(promotions.id, promotionId)).limit(1);
-  if (!pr) throw notFound('Khuyến mãi không tồn tại');
-  if (!pr.latestVersionId) throw businessRuleViolation('Khuyến mãi chưa có phiên bản nào');
+  if (!pr) throw notFound('Promotion not found');
+  if (!pr.latestVersionId) throw businessRuleViolation('This promotion has no versions yet');
 
   const [ver] = await db
     .select()
     .from(promotionVersions)
     .where(eq(promotionVersions.id, pr.latestVersionId))
     .limit(1);
-  if (!ver) throw notFound('Không tìm thấy phiên bản mới nhất');
+  if (!ver) throw notFound('Latest version not found');
 
   const rootId = await timHoacTaoFolder(ROOT_FOLDER, null, actor.id);
   let folderId = await timHoacTaoFolder(pr.category, rootId, actor.id);
@@ -632,7 +632,7 @@ export interface PromotionDetail extends PromotionListItem {
 export async function getPromotionDetail(id: string, versionId?: string): Promise<PromotionDetail> {
   const { promotions, promotionVersions } = kbTables();
   const [p] = await db.select().from(promotions).where(eq(promotions.id, id)).limit(1);
-  if (!p) throw notFound('Khuyến mãi không tồn tại');
+  if (!p) throw notFound('Promotion not found');
 
   // Sắp theo THỜI ĐIỂM NHẬP chứ không theo ngày bắt đầu: bản nhập gần nhất mới là bản đang
   // hiển thị trên web M88, kể cả khi nó có ngày bắt đầu cũ hơn bản trước.
@@ -642,9 +642,9 @@ export async function getPromotionDetail(id: string, versionId?: string): Promis
     .where(eq(promotionVersions.promotionId, id))
     .orderBy(desc(promotionVersions.importedAt));
 
-  if (!vers.length) throw notFound('Khuyến mãi chưa có phiên bản nào');
+  if (!vers.length) throw notFound('This promotion has no versions yet');
   const chon = versionId ? vers.find((v) => v.id === versionId) : vers[0];
-  if (!chon) throw notFound('Phiên bản không tồn tại');
+  if (!chon) throw notFound('Version not found');
 
   return {
     id: p.id,
@@ -678,7 +678,7 @@ export async function getPromotionDetail(id: string, versionId?: string): Promis
 export async function updateProvider(id: string, provider: string | null, actor: AuthUser): Promise<Promotion> {
   const { promotions } = kbTables();
   const [p] = await db.select().from(promotions).where(eq(promotions.id, id)).limit(1);
-  if (!p) throw notFound('Khuyến mãi không tồn tại');
+  if (!p) throw notFound('Promotion not found');
 
   const giaTri = provider?.trim() ? provider.trim() : null;
   const [updated] = await db

@@ -556,11 +556,23 @@
     padding: 0.75rem 1rem;
     font-size: 0.84rem;
   }
+  /* Điện thoại có 2 cỡ như máy tính, đổi bằng nút ⛶ (AIChatWidget.tsx): cỡ THƯỜNG là thẻ gọn chừa
+     lề để vẫn thấy trang phía sau; cỡ PHÓNG TO kín màn hình. Trước đây chỉ có một cỡ gần kín màn hình
+     mà lại hở lề trái/trên do max-width/max-height kế thừa từ chat.css, và không có cách thu nhỏ. */
   .ai-chat-popup {
-    bottom: 0;
-    right: 0;
-    width: 100vw;
-    height: 100vh;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    max-width: none;
+    height: 70vh;
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 16px;
+  }
+  .ai-chat-popup.expanded {
+    inset: 0;
+    height: auto;
+    max-height: none;
     border-radius: 0;
   }
 }

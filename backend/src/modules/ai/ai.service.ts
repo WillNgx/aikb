@@ -8,6 +8,7 @@ import { normalizeQuery, detectAmbiguity, detectProvidersInQuery } from "./slang
 import { rewriteQuery } from "./queryRewrite.service";
 import { getRecentQuestions, mergeWithHistory, sanitizeClientHistory } from "./contextHistory.service";
 import { callChatModel } from "../llm/llm.service";
+import { clarifyQueries, fillText, getAiTexts } from "./aiTexts";
 
 // Số chunk tối đa đưa vào context để AI trả lời — giữ ở mức cao để câu trả lời đầy đủ, KHÔNG
 // phải số link hiển thị cho user (xem DEFAULT_RELATED_LINKS_COUNT + getRelatedLinksCount bên dưới).
@@ -151,25 +152,31 @@ export async function chat(
       "Club M88": "🎲",
     };
 
+    // Câu chữ theo KB (Admin sửa được ở trang System prompt) — xem aiTexts.ts
+    const texts = await getAiTexts();
+    const queries = clarifyQueries(currentKb().locale);
+    const topic = ambiguity.topic ?? "";
+
     const clarificationOptions: ClarificationOption[] = [
       ...ambiguity.matchedProviders.map((p) => ({
         label: `${PROVIDER_ICONS[p] ?? "📋"} ${p}`,
         provider: p,
-        query: `${normalizedQuestion} tại sảnh ${p}`,
+        query: queries.pickProvider(normalizedQuestion, p),
       })),
       {
-        label: "📑 So sánh tất cả",
+        label: `📑 ${texts.compareAll}`,
         provider: "__all__",
-        query: `So sánh ${ambiguity.topic} giữa các sảnh: ${ambiguity.matchedProviders.join(", ")}`,
+        query: queries.compareAll(topic, ambiguity.matchedProviders),
       },
     ];
 
+    const clarificationQuestion = fillText(texts.clarify, { topic });
     return {
-      answer: ambiguity.question ?? "Bạn muốn tra cứu thông tin của sảnh nào?",
+      answer: clarificationQuestion,
       citations: [],
       hasAnswer: false,
       needsClarification: true,
-      clarificationQuestion: ambiguity.question,
+      clarificationQuestion,
       clarificationOptions,
     };
   }
@@ -226,9 +233,7 @@ export async function chat(
     }
 
     return {
-      answer:
-        "Tôi không tìm thấy thông tin liên quan đến câu hỏi của bạn trong Knowledge Base nội bộ. " +
-        "Vui lòng liên hệ bộ phận phụ trách hoặc thử tìm kiếm với từ khóa khác.",
+      answer: (await getAiTexts()).noAnswer,
       citations: [],
       hasAnswer: false,
       suggestions: searchResults.slice(0, 3),
@@ -258,7 +263,7 @@ export async function chat(
     !!normalized.detectedProvider &&
     !contextChunks.some((c) => c.provider === normalized.detectedProvider);
   const note = providerMismatch
-    ? `⚠️ Chưa tìm thấy nội dung được gắn riêng cho "${normalized.detectedProvider}" — câu trả lời dưới đây chỉ mang tính tham khảo chung, vui lòng xác minh thêm.`
+    ? `⚠️ ${fillText((await getAiTexts()).providerNote, { provider: normalized.detectedProvider ?? "" })}`
     : undefined;
 
   // ── Bước 4: Gọi model chat với system prompt grounding ────────────────────
@@ -380,13 +385,22 @@ TRÌNH BÀY:
     );
   }
 
+  // Câu bọc câu hỏi theo ngôn ngữ của KB: KB tiếng Việt giữ nguyên câu cũ, KB khác dùng tiếng Anh
+  // trung tính — câu bọc tiếng Việt kéo model trả lời lẫn tiếng Việt cho người hỏi bằng tiếng khác.
+  const askBlock =
+    kb.locale === 'vi'
+      ? `Câu hỏi: ${question}
+
+Trả lời câu hỏi trên. Chỉ được dùng thông tin nằm trong KB_CONTEXT.`
+      : `Question: ${question}
+
+Answer the question above using only the information inside KB_CONTEXT.`;
+
   const userMessage = `<<<KB_CONTEXT>>>
 ${context}
 <<<END_KB_CONTEXT>>>
 
-Câu hỏi: ${question}
-
-Trả lời câu hỏi trên. Chỉ được dùng thông tin nằm trong KB_CONTEXT.`;
+${askBlock}`;
 
   // Tham số giữ nguyên như khi gọi Gemini trực tiếp: temperature thấp để bám sát KB,
   // maxOutputTokens 2048 đủ cho câu trả lời dài nhất hiện có.

@@ -57,7 +57,7 @@ router.get('/', async (req, res, next) => {
     const { status } = req.query as { status?: string };
 
     if (status && status !== 'all' && !VALID_STATUSES.includes(status as TelegramStatus)) {
-      res.status(400).json({ error: 'Trạng thái lọc không hợp lệ' });
+      res.status(400).json({ error: 'Invalid status filter' });
       return;
     }
 
@@ -97,7 +97,7 @@ router.patch('/:id/kb', async (req, res, next) => {
   try {
     const { kbCode } = req.body as { kbCode?: string };
     if (!kbCode) {
-      res.status(400).json({ error: 'Thiếu kbCode' });
+      res.status(400).json({ error: 'Missing kbCode' });
       return;
     }
     const actor = { id: req.user!.id, email: req.user!.email };

@@ -85,17 +85,17 @@ export async function createKb(
   if (!KB_CODE_PATTERN.test(code)) {
     throw new AppError(
       400,
-      'Mã KB phải bắt đầu bằng "kb_" và chỉ gồm chữ thường, số hoặc gạch dưới (ví dụ: kb_id, kb_th)'
+      'The KB code must start with "kb_" and contain only lowercase letters, digits or underscores (e.g. kb_id, kb_th)'
     );
   }
-  if (!name) throw new AppError(400, 'Tên hiển thị không được để trống');
+  if (!name) throw new AppError(400, 'Display name is required');
 
   const [trung] = await db
     .select({ code: knowledgeBases.code })
     .from(knowledgeBases)
     .where(sql`${knowledgeBases.code} = ${code} OR ${knowledgeBases.schemaName} = ${code}`)
     .limit(1);
-  if (trung) throw new AppError(409, `Knowledge Base "${code}" đã tồn tại`);
+  if (trung) throw new AppError(409, `Knowledge Base "${code}" already exists`);
 
   // Schema trùng tên nhưng chưa có trong bảng `knowledge_bases` (ví dụ lần tạo trước hỏng giữa
   // chừng) — dừng lại thay vì đổ bảng mới vào một schema có sẵn dữ liệu lạ.
@@ -105,7 +105,7 @@ export async function createKb(
   if (daCoSchema.rows.length > 0) {
     throw new AppError(
       409,
-      `Schema "${code}" đã tồn tại trong cơ sở dữ liệu nhưng chưa được đăng ký. Cần kiểm tra lại trước khi dùng mã này.`
+      `Schema "${code}" already exists in the database but is not registered. Check it before using this code.`
     );
   }
 
@@ -118,7 +118,7 @@ export async function createKb(
   if (schemaNguon === 'public') {
     throw new AppError(
       500,
-      'KB mặc định đang nằm ở schema "public" nên không dùng làm mẫu được. Cần chuyển nó sang schema riêng trước khi tạo KB mới.'
+      'The default KB lives in the "public" schema and cannot be used as a template. Move it to its own schema before creating a new KB.'
     );
   }
 

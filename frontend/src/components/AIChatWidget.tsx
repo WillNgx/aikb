@@ -7,6 +7,7 @@ import type { ChatProgress as ChatProgressData } from "../api";
 import { useNavigate } from "react-router-dom";
 import ChatMarkdown from "./ChatMarkdown";
 import ChatProgress from "./ChatProgress";
+import { useKbChatText } from "../api/kb";
 
 interface ClarificationOption {
   label: string;
@@ -23,6 +24,8 @@ interface ChatMessage {
   needsClarification?: boolean;
   clarificationOptions?: ClarificationOption[];
   note?: string;
+  /** Lời chào / lời sau khi làm mới: nội dung lấy lúc render theo KB đang xem (xem useKbChatText). */
+  kbText?: "greeting" | "cleared";
 }
 
 interface Citation {
@@ -44,15 +47,14 @@ interface Suggestion {
 export default function AIChatWidget() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const kbText = useKbChatText();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  // Phóng to phủ gần kín trang — câu trả lời dài đọc trong khung nhỏ 420px rất khó theo dõi.
+  const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: t("chat.greeting"),
-      hasAnswer: true,
-    },
+    { role: "assistant", content: "", hasAnswer: true, kbText: "greeting" },
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Bước xử lý hiện tại do backend đẩy về qua SSE; null = vừa gửi, chưa nhận event nào.
@@ -67,6 +69,16 @@ export default function AIChatWidget() {
       scrollToBottom();
     }
   }, [messages, isOpen, isMinimized]);
+
+  // Esc thu khung chat từ chế độ phóng to về kích thước thường
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isExpanded]);
 
   const chatMutation = useMutation({
     mutationFn: (question: string) => aiApi.chatStream(question, setProgress),
@@ -132,13 +144,7 @@ export default function AIChatWidget() {
   };
 
   const handleClearHistory = () => {
-    setMessages([
-      {
-        role: "assistant",
-        content: t("chat.cleared"),
-        hasAnswer: true,
-      },
-    ]);
+    setMessages([{ role: "assistant", content: "", hasAnswer: true, kbText: "cleared" }]);
   };
 
   return (
@@ -163,7 +169,9 @@ export default function AIChatWidget() {
 
       {/* Floating Chat Popup Window */}
       {isOpen && (
-        <div className={`ai-chat-popup ${isMinimized ? "minimized" : ""}`}>
+        <div
+          className={`ai-chat-popup ${isMinimized ? "minimized" : ""} ${isExpanded && !isMinimized ? "expanded" : ""}`}
+        >
           {/* Header */}
           <div className="chat-popup-header">
             <div
@@ -188,6 +196,18 @@ export default function AIChatWidget() {
                 🔄
               </button>
               <button
+                className="popup-btn maximize-btn"
+                title={isExpanded ? t("chat.restoreSize") : t("chat.maximize")}
+                aria-label={isExpanded ? t("chat.restoreSize") : t("chat.maximize")}
+                aria-pressed={isExpanded}
+                onClick={() => {
+                  setIsExpanded(!isExpanded);
+                  setIsMinimized(false);
+                }}
+              >
+                <i className={`fa ${isExpanded ? "fa-compress" : "fa-expand"}`} aria-hidden="true" />
+              </button>
+              <button
                 className="popup-btn"
                 title={isMinimized ? t("chat.expand") : t("chat.minimize")}
                 onClick={() => setIsMinimized(!isMinimized)}
@@ -197,7 +217,11 @@ export default function AIChatWidget() {
               <button
                 className="popup-btn close-btn"
                 title={t("chat.closeChat")}
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setIsOpen(false);
+                  // Lần mở sau bắt đầu lại ở kích thước thường
+                  setIsExpanded(false);
+                }}
               >
                 ✕
               </button>
@@ -220,7 +244,7 @@ export default function AIChatWidget() {
                     <div className="msg-content-wrapper">
                       <div className="msg-bubble">
                         {msg.role === "assistant" ? (
-                          <ChatMarkdown content={msg.content} />
+                          <ChatMarkdown content={msg.kbText ? kbText[msg.kbText] : msg.content} />
                         ) : (
                           <div style={{ whiteSpace: "pre-wrap" }}>
                             {msg.content}

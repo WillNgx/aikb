@@ -520,3 +520,37 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+
+/* ─── Phóng to khung chat ─────────────────────────────────────────
+   Nút ⛶ ở đầu khung chat (AIChatWidget.tsx) phủ khung chat gần kín trang, Esc hoặc bấm lại để thu
+   về. Rule dưới đây chỉ cho máy tính; cỡ thường/phóng to của điện thoại nằm trong khối @media
+   (max-width: 768px) của pages.css. Nút ⛶ PHẢI hiện ở mọi cỡ màn hình — từng ẩn trên điện thoại, và
+   phóng to ở máy tính rồi thu cửa sổ lại là kẹt ở cỡ lớn, không còn nút nào để thu về. */
+@media (min-width: 769px) {
+  .ai-chat-popup.expanded {
+    top: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    border-radius: 14px;
+  }
+
+  /* Nội dung chỉ rộng vừa tầm mắt và căn giữa: trải hết màn hình rộng thì mỗi dòng quá dài, khó đọc.
+     Giới hạn từng hàng tin nhắn chứ không giới hạn cả vùng cuộn, để thanh cuộn vẫn nằm ở mép khung. */
+  .ai-chat-popup.expanded .chat-popup-message {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ai-chat-popup.expanded .chat-popup-footer {
+    padding-left: max(0.875rem, calc((100% - 900px) / 2));
+    padding-right: max(0.875rem, calc((100% - 900px) / 2));
+  }
+}
+

@@ -18,13 +18,13 @@ router.post('/', authenticate, requireAdmin, async (req, res, next) => {
 
     if (!started) {
       return res.status(409).json({
-        message: 'Đang có 1 lượt re-index khác chạy dở, vui lòng đợi hoàn tất',
+        message: 'Another re-index run is in progress, please wait until it finishes',
         total,
       });
     }
 
     res.json({
-      message: `Re-index đã khởi động cho ${total} bài viết`,
+      message: `Re-index started for ${total} articles`,
       count: total,
     });
   } catch (err) {
@@ -43,12 +43,12 @@ router.post('/retry-failed', authenticate, requireAdmin, async (req, res, next) 
 
     if (!started) {
       return res.status(409).json({
-        message: total === 0 ? 'Không có bài nào lỗi để thử lại' : 'Đang có 1 lượt re-index khác chạy dở',
+        message: total === 0 ? 'No failed articles to retry' : 'Another re-index run is in progress',
         total,
       });
     }
 
-    res.json({ message: `Đã bắt đầu thử lại ${total} bài lỗi`, count: total });
+    res.json({ message: `Started retrying ${total} failed articles`, count: total });
   } catch (err) {
     next(err);
   }

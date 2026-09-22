@@ -57,7 +57,7 @@ export function isQuotaError(err: unknown): boolean {
 export async function embedText(text: string): Promise<number[]> {
   const apiKeys = getApiKeys();
   if (apiKeys.length === 0) {
-    throw new Error('Chưa cấu hình GEMINI_API_KEY trong file .env ở thư mục gốc');
+    throw new Error('GEMINI_API_KEY is not configured in the .env file at the repo root');
   }
 
   let lastQuotaError: unknown = null;

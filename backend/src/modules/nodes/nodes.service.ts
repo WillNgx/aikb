@@ -126,7 +126,7 @@ export async function createNode(
   if (input.parentId) {
     const [parent] = await db.select().from(nodes).where(eq(nodes.id, input.parentId)).limit(1);
     if (!parent || parent.type !== 'folder') {
-      throw businessRuleViolation('Parent phải là một Thư mục hợp lệ');
+      throw businessRuleViolation('Parent must be a valid folder');
     }
   }
 
@@ -163,7 +163,7 @@ export async function updateNode(
 ): Promise<TreeNode> {
   const { nodes } = kbTables();
   const [existing] = await db.select().from(nodes).where(eq(nodes.id, id)).limit(1);
-  if (!existing) throw notFound('Node không tồn tại');
+  if (!existing) throw notFound('Node not found');
 
   const newName = input.name ?? existing.name;
   const newBody = input.body !== undefined ? input.body : existing.body;
@@ -211,15 +211,15 @@ export async function moveNode(
   const { nodes } = kbTables();
   const allNodes = await db.select().from(nodes);
   const source = allNodes.find((n) => n.id === id);
-  if (!source) throw notFound('Node không tồn tại');
+  if (!source) throw notFound('Node not found');
 
   // Không di chuyển vào chính nó
-  if (id === targetParentId) throw businessRuleViolation('Không thể di chuyển node vào chính nó');
+  if (id === targetParentId) throw businessRuleViolation('Cannot move a node into itself');
 
   // Kiểm tra circular: targetParentId không được là con cháu của source
   if (targetParentId && source.type === 'folder') {
     if (isDescendant(id, targetParentId, allNodes)) {
-      throw businessRuleViolation('Không thể di chuyển Thư mục vào bên trong chính con/cháu của nó');
+      throw businessRuleViolation('Cannot move a folder into one of its own descendants');
     }
   }
 
@@ -227,7 +227,7 @@ export async function moveNode(
   if (targetParentId) {
     const target = allNodes.find((n) => n.id === targetParentId);
     if (!target || target.type !== 'folder') {
-      throw businessRuleViolation('Thư mục đích không hợp lệ');
+      throw businessRuleViolation('Invalid target folder');
     }
   }
 
@@ -260,8 +260,8 @@ export async function setProviderFlag(
 ): Promise<TreeNode> {
   const { nodes } = kbTables();
   const [existing] = await db.select().from(nodes).where(eq(nodes.id, id)).limit(1);
-  if (!existing) throw notFound('Node không tồn tại');
-  if (existing.type !== 'folder') throw businessRuleViolation('Chỉ Thư mục mới có thể đánh dấu là Provider');
+  if (!existing) throw notFound('Node not found');
+  if (existing.type !== 'folder') throw businessRuleViolation('Only folders can be marked as a Provider');
 
   const [updated] = await db
     .update(nodes)
@@ -295,7 +295,7 @@ export async function reorderNodes(
     currentIds.size !== orderedIds.length ||
     !orderedIds.every((id) => currentIds.has(id))
   ) {
-    throw businessRuleViolation('Danh sách sắp xếp không khớp với các mục con hiện tại của thư mục này');
+    throw businessRuleViolation('The sort list does not match the current children of this folder');
   }
 
   await Promise.all(
@@ -354,8 +354,8 @@ export async function publishNode(
 ): Promise<TreeNode> {
   const { nodes } = kbTables();
   const [existing] = await db.select().from(nodes).where(eq(nodes.id, id)).limit(1);
-  if (!existing) throw notFound('Node không tồn tại');
-  if (existing.type !== 'article') throw businessRuleViolation('Chỉ Article mới có thể Publish');
+  if (!existing) throw notFound('Node not found');
+  if (existing.type !== 'article') throw businessRuleViolation('Only articles can be published');
 
   const [updated] = await db
     .update(nodes)
@@ -544,11 +544,11 @@ export async function deleteNode(
   const { nodes } = kbTables();
   const allNodes = await db.select().from(nodes);
   const target = allNodes.find((n) => n.id === id);
-  if (!target) throw notFound('Node không tồn tại');
+  if (!target) throw notFound('Node not found');
 
   if (target.type === 'folder' && hasArticleDescendant(id, allNodes)) {
     throw businessRuleViolation(
-      'BR-012: Không thể xóa thư mục khi bên trong còn Article (kể cả Article nằm trong thư mục con). Vui lòng xóa hoặc di chuyển các Article đó trước.',
+      'BR-012: Cannot delete a folder that still contains articles (including articles in subfolders). Delete or move those articles first.',
       'BR-012'
     );
   }

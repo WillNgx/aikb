@@ -11,34 +11,19 @@
  */
 
 const STORAGE_KEY = 'active_kb';
-const LOCALE_KEY = 'active_kb_locale';
 
 /** Mã KB mặc định — khớp với DEFAULT_KB_CODE bên backend. */
 export const DEFAULT_KB_CODE = 'kb_vi';
-/** Ngôn ngữ mặc định của giao diện. */
-export const DEFAULT_LOCALE = 'vi';
 
 /**
- * Ngôn ngữ giao diện = `locale` của KB đang xem.
- *
- * Lưu riêng ở localStorage thay vì tra từ danh sách KB, vì i18n phải khởi tạo TRƯỚC khi render
- * (main.tsx) trong khi danh sách KB chỉ có sau một lượt gọi API. Giá trị này được đồng bộ lại
- * mỗi khi danh sách KB tải xong hoặc người dùng chuyển KB (xem KbSwitcher.tsx).
+ * VNKB — KB DUY NHẤT có nút đổi ngôn ngữ giao diện EN/VI; mọi KB khác giao diện luôn tiếng Anh
+ * (quyết định của chủ dự án, xem lib/i18n.ts). So theo mã chứ không theo `locale` của KB vì
+ * i18n phải biết ngôn ngữ NGAY lúc khởi động, trước khi danh sách KB tải xong.
  */
-export function getActiveLocale(): string {
-  try {
-    return localStorage.getItem(LOCALE_KEY) || DEFAULT_LOCALE;
-  } catch {
-    return DEFAULT_LOCALE;
-  }
-}
+export const VN_KB_CODE = 'kb_vi';
 
-export function setActiveLocale(locale: string): void {
-  try {
-    localStorage.setItem(LOCALE_KEY, locale);
-  } catch {
-    // bỏ qua
-  }
+export function isVnKb(code: string = getActiveKb()): boolean {
+  return code === VN_KB_CODE;
 }
 
 export function getActiveKb(): string {
@@ -63,12 +48,15 @@ export function setActiveKb(code: string): void {
  * Gọi sau khi đăng nhập: tài khoản của đội tiếng Anh mở lên là vào thẳng ENKB. Nếu người dùng
  * đã tự chuyển sang KB khác thì tôn trọng lựa chọn đó, không ghi đè mỗi lần vào lại trang.
  */
-export function ensureActiveKb(defaultKb: string): void {
+/** Trả `true` nếu vừa đặt KB (lần đầu) — lúc đó nơi gọi phải áp lại ngôn ngữ giao diện. */
+export function ensureActiveKb(defaultKb: string): boolean {
   try {
     if (!localStorage.getItem(STORAGE_KEY) && defaultKb) {
       localStorage.setItem(STORAGE_KEY, defaultKb);
+      return true;
     }
   } catch {
     // bỏ qua
   }
+  return false;
 }

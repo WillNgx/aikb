@@ -18,7 +18,7 @@ const createSchema = z
     parentId: z.string().uuid().nullable().optional(),
   })
   .refine((data) => data.type !== 'folder' || data.name.trim().length > 0, {
-    message: 'Tên thư mục bắt buộc',
+    message: 'Folder name is required',
     path: ['name'],
   });
 
@@ -58,12 +58,12 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const node = await nodesService.getNodeById(req.params.id as string);
     if (!node) {
-      res.status(404).json({ error: 'Node không tồn tại' });
+      res.status(404).json({ error: 'Node not found' });
       return;
     }
     // User thường chỉ xem Published
     if (!isAdminRole(req.user!.role) && node.status !== 'published') {
-      res.status(403).json({ error: 'Bài viết chưa được xuất bản' });
+      res.status(403).json({ error: 'This article has not been published' });
       return;
     }
     res.json(node);

@@ -94,7 +94,7 @@ app.use('/api/kb', kbRouter);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {
-  res.status(404).json({ error: 'Endpoint không tồn tại' });
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
 // ─── Global Error Handler (phải cuối cùng) ───────────────────────────────────

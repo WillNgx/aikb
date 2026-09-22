@@ -35,12 +35,12 @@ export function isAdminRole(role: string): boolean {
  */
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   if (!req.user) {
-    res.status(401).json({ error: 'Chưa xác thực' });
+    res.status(401).json({ error: 'Not authenticated' });
     return;
   }
 
   if (!isAdminRole(req.user.role)) {
-    res.status(403).json({ error: 'Bạn không có quyền truy cập chức năng Admin' });
+    res.status(403).json({ error: 'You do not have access to Admin features' });
     return;
   }
 
@@ -50,7 +50,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   }
 
   if (!hasKbContext()) {
-    res.status(500).json({ error: 'Không xác định được Knowledge Base của yêu cầu' });
+    res.status(500).json({ error: 'Could not determine the Knowledge Base of this request' });
     return;
   }
 
@@ -58,8 +58,8 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   if (kbDangDung !== req.user.defaultKb) {
     res.status(403).json({
       error:
-        `Bạn chỉ được chỉnh sửa Knowledge Base "${req.user.defaultKb}". ` +
-        `Yêu cầu này đang thao tác trên "${kbDangDung}" — bạn chỉ có quyền xem.`,
+        `You can only edit Knowledge Base "${req.user.defaultKb}". ` +
+        `This request targets "${kbDangDung}", where you only have read access.`,
     });
     return;
   }
@@ -73,12 +73,12 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
  */
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
   if (!req.user) {
-    res.status(401).json({ error: 'Chưa xác thực' });
+    res.status(401).json({ error: 'Not authenticated' });
     return;
   }
 
   if (req.user.role !== 'super_admin') {
-    res.status(403).json({ error: 'Chức năng này chỉ dành cho Quản trị hệ thống' });
+    res.status(403).json({ error: 'This feature is only available to System administrators' });
     return;
   }
 

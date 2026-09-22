@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authApi } from './api';
 import { TOKEN_HINT_KEY } from './lib/supabase';
 import { ensureActiveKb } from './lib/kb';
+import { syncUiLocale } from './lib/i18n';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -57,7 +58,9 @@ function ProtectedRoute({
   if (isError) return <Navigate to="/login" replace />;
 
   // Lần đăng nhập đầu: mở đúng KB mặc định của tài khoản (không ghi đè nếu người dùng đã tự chọn)
-  if (user?.defaultKb) ensureActiveKb(user.defaultKb);
+  // Vừa đặt KB lần đầu thì ngôn ngữ giao diện có thể phải đổi theo (KB khác VNKB luôn tiếng Anh).
+  // Đẩy ra sau lượt render: đổi ngôn ngữ ngay giữa lúc render sẽ bắt component khác cập nhật theo.
+  if (user?.defaultKb && ensureActiveKb(user.defaultKb)) setTimeout(() => void syncUiLocale(), 0);
   const laQuanTri = user?.role === 'super_admin' || user?.role === 'admin';
   if (adminOnly && !laQuanTri) return <Navigate to="/documents" replace />;
   if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to="/documents" replace />;

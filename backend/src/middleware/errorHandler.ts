@@ -17,7 +17,7 @@ export function errorHandler(
   const isDev = process.env.NODE_ENV !== 'production';
 
   // Lỗi nghiệp vụ đã tự khai báo status (404/409/422...) — trả đúng status và message thật cho
-  // client. Message của AppError là câu tiếng Việt viết cho người dùng đọc nên trả thẳng được,
+  // client. Message của AppError là câu tiếng Anh viết cho người dùng đọc nên trả thẳng được,
   // khác với lỗi không lường trước bên dưới (có thể lộ chi tiết nội bộ nên phải che).
   if (err instanceof AppError) {
     res.status(err.status).json({
@@ -36,7 +36,7 @@ export function errorHandler(
   const code = (err as Error & { code?: string }).code;
 
   res.status(500).json({
-    error: 'Lỗi máy chủ nội bộ',
+    error: 'Internal server error',
     ...(aiName && { aiName }),
     ...(code && { code }),
     ...(isDev && { detail: err.message, stack: err.stack }),

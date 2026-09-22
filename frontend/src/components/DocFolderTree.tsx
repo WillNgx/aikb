@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   useTreeQuery,
   useMoveNode,
@@ -11,7 +11,7 @@ import {
   findNodeInTree,
   getAllFolders,
 } from "../hooks/useTree";
-import type { TreeNodeDTO } from "../api";
+import { useAuthUser, type TreeNodeDTO } from "../api";
 import { useAlert } from "./ConfirmModal";
 
 interface DocFolderTreeProps {
@@ -51,6 +51,7 @@ export default function DocFolderTree({
   const [searchTerm, setSearchTerm] = useState("");
   const thongBao = useAlert();
   const { t } = useTranslation();
+  const { isAdmin } = useAuthUser();
 
   // React Query tree data & mutations
   const { data: treeData = [], isLoading } = useTreeQuery();
@@ -575,7 +576,7 @@ export default function DocFolderTree({
         >
           <span className="root-zone-icon">🏠</span>
           <span className="root-zone-text">
-            Thả vào đây để đưa ra Thư mục gốc (Root)
+            {t("tree.rootDropZone")}
           </span>
         </div>
       )}
@@ -595,7 +596,7 @@ export default function DocFolderTree({
               textAlign: "center",
             }}
           >
-            ⏳ Đang tải dữ liệu từ máy chủ...
+            ⏳ {t("tree.loading")}
           </div>
         ) : treeData.length === 0 ? (
           <div
@@ -606,9 +607,19 @@ export default function DocFolderTree({
               textAlign: "center",
             }}
           >
-            📁 Chưa có thư mục nào.
-            <br />
-            Nhấp <strong>+ Thêm mới</strong> để tạo.
+            📁 {t("tree.empty")}
+            {/* Chỉ quản trị mới có nút tạo thư mục. Tên nút lấy thẳng từ từ điển để đổi tên nút
+                thì câu gợi ý tự khớp theo — câu cũ từng nhắc nút "+ Thêm mới" đã không còn. */}
+            {isAdmin && (
+              <>
+                <br />
+                <Trans
+                  i18nKey="tree.emptyHint"
+                  values={{ button: `+ ${t("docs.folder")}` }}
+                  components={{ b: <strong /> }}
+                />
+              </>
+            )}
           </div>
         ) : (
           treeData.map((rootNode) => renderNode(rootNode, 0))

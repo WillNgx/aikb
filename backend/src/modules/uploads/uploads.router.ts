@@ -37,14 +37,14 @@ async function ensureBucket(): Promise<void> {
  */
 async function detectAllowedMime(buffer: Buffer): Promise<{ mime: string; ext: string }> {
   if (buffer.byteLength > MAX_BYTES) {
-    throw new AppError(413, 'Ảnh vượt quá dung lượng tối đa 5MB');
+    throw new AppError(413, 'Image exceeds the 5MB size limit');
   }
   const detected = await fromBuffer(buffer);
   const ext = detected && ALLOWED_MIME[detected.mime];
   if (!detected || !ext) {
     throw new AppError(
       400,
-      'Nội dung file không khớp định dạng ảnh cho phép (PNG, JPEG, WEBP, GIF)'
+      'File content does not match an allowed image format (PNG, JPEG, WEBP, GIF)'
     );
   }
   return { mime: detected.mime, ext };
@@ -58,7 +58,7 @@ async function storeImageBuffer(buffer: Buffer, mime: string, ext: string, userI
     .from(BUCKET)
     .upload(fileName, buffer, { contentType: mime, upsert: false });
   if (uploadError) {
-    throw new AppError(500, `Upload thất bại: ${uploadError.message}`);
+    throw new AppError(500, `Upload failed: ${uploadError.message}`);
   }
   const { data: publicUrlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(fileName);
   return publicUrlData.publicUrl;
@@ -66,7 +66,7 @@ async function storeImageBuffer(buffer: Buffer, mime: string, ext: string, userI
 
 const uploadSchema = z.object({
   // data URI: "data:image/png;base64,...."
-  imageBase64: z.string().min(1, 'Dữ liệu ảnh bắt buộc'),
+  imageBase64: z.string().min(1, 'Image data is required'),
 });
 
 /**
@@ -80,7 +80,7 @@ router.post('/image', authenticate, requireAdmin, validateBody(uploadSchema), as
 
     const match = imageBase64.match(/^data:([a-zA-Z0-9/+.-]+);base64,(.+)$/);
     if (!match) {
-      res.status(400).json({ error: 'Định dạng ảnh không hợp lệ (cần data URI base64)' });
+      res.status(400).json({ error: 'Invalid image format (expected a base64 data URI)' });
       return;
     }
     const [, , base64Data] = match;
@@ -134,7 +134,7 @@ async function isSafeExternalUrl(url: URL): Promise<boolean> {
 }
 
 const uploadFromUrlSchema = z.object({
-  imageUrl: z.string().url('URL ảnh không hợp lệ'),
+  imageUrl: z.string().url('Invalid image URL'),
 });
 
 /**
@@ -152,11 +152,11 @@ router.post('/from-url', authenticate, requireAdmin, validateBody(uploadFromUrlS
     try {
       parsedUrl = new URL(imageUrl);
     } catch {
-      res.status(400).json({ error: 'URL ảnh không hợp lệ' });
+      res.status(400).json({ error: 'Invalid image URL' });
       return;
     }
     if (!(await isSafeExternalUrl(parsedUrl))) {
-      res.status(400).json({ error: 'URL ảnh không được phép (chỉ hỗ trợ http/https tới host công khai)' });
+      res.status(400).json({ error: 'Image URL not allowed (only http/https to public hosts)' });
       return;
     }
 
@@ -174,14 +174,14 @@ router.post('/from-url', authenticate, requireAdmin, validateBody(uploadFromUrlS
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InternalKB-ImageFetch/1.0)' },
       });
     } catch {
-      res.status(400).json({ error: 'Không tải được ảnh từ URL đã cho (site nguồn có thể chặn truy cập)' });
+      res.status(400).json({ error: 'Could not download the image from the given URL (the source site may block access)' });
       return;
     } finally {
       clearTimeout(timeout);
     }
 
     if (!response.ok) {
-      res.status(400).json({ error: `Không tải được ảnh từ URL đã cho (HTTP ${response.status})` });
+      res.status(400).json({ error: `Could not download the image from the given URL (HTTP ${response.status})` });
       return;
     }
 

@@ -29,6 +29,8 @@ export default {
   layout: {
     brandSubtitle: 'Internal Doc & AI',
     toggleTheme: 'Đổi giao diện Sáng / Tối',
+    collapseSidebar: 'Thu gọn thanh bên',
+    expandSidebar: 'Mở thanh bên',
     switchArea: 'Chuyển khu vực',
     tabDocuments: 'Tài liệu KB',
     tabPromotions: 'Khuyến mãi',
@@ -67,6 +69,8 @@ export default {
     wrongCredentials: 'Email hoặc mật khẩu không đúng',
     connectionError: 'Lỗi kết nối. Vui lòng thử lại.',
     footer: 'Tài khoản do Admin tạo. Liên hệ Admin nếu cần hỗ trợ.',
+    showPassword: 'Hiện mật khẩu',
+    hidePassword: 'Ẩn mật khẩu',
   },
 
   chatProgress: {
@@ -173,10 +177,6 @@ export default {
     confirmDeleteAllTitle: 'Xoá toàn bộ thống kê token?',
 
     providerTitle: 'Cấu hình AI Chat (Provider & Model)',
-    providerDesc:
-      'Chọn dịch vụ AI dùng để sinh câu trả lời cho AI Chat box. Nếu provider đang chọn hết quota, hệ thống <b>tự động chuyển sang provider khác còn quota</b> theo thứ tự: <b>{{order}}</b>.',
-    providerKeyNote:
-      'API key được đọc từ file <c>.env</c> ở thư mục gốc — không nhập key tại đây. Phần AI tạo embedding cho Tìm kiếm vẫn luôn dùng Gemini, không đổi theo mục này.',
     providerSaved: 'Đã lưu cấu hình AI Chat thành công!',
     noApiKeyTag: '(chưa có API key)',
     modelPlaceholder: 'Nhập model id',
@@ -196,8 +196,6 @@ export default {
 
     // Cổng AI Custom (Public Gateways)
     customGatewaysTitle: 'Cổng AI Custom (Public Gateways)',
-    customGatewaysDesc:
-      'Quản lý các cổng AI trung chuyển (chuẩn OpenAI Compatible). Các cổng này được lưu trong cơ sở dữ liệu và có thể chọn làm Provider chính cho AI Chat.',
     addCustomGateway: 'Thêm cổng AI Custom',
     editCustomGateway: 'Sửa cổng AI Custom',
     createGatewayTitle: 'Thêm Cổng AI Custom Mới',
@@ -221,6 +219,11 @@ export default {
     gatewaySaved: 'Đã lưu cổng AI Custom thành công!',
     gatewayDeleted: 'Đã xóa cổng AI Custom thành công!',
     gatewaySaveFailed: 'Không lưu được cổng AI Custom',
+    gatewayRequiredFields: 'Vui lòng điền đủ Tên cổng, Base URL và Model mặc định.',
+    gatewayApiKeyRequired: 'Vui lòng nhập API Key cho cổng mới',
+    gatewayLoading: 'Đang tải danh sách cổng custom...',
+    gatewayActionsCol: 'Thao tác',
+    gatewayDeleteTitle: 'Xóa cổng này',
 
     thresholdTitle: 'Cấu hình Ngưỡng Tương Đồng AI (Relevance Threshold)',
     thresholdDesc:
@@ -239,9 +242,9 @@ export default {
 
     rateLimitTitle: 'Giới hạn truy cập (Rate limit)',
     rateLimitDesc:
-      'Số request tối đa cho phép từ <b>mỗi địa chỉ IP</b>. Lưu xong có hiệu lực ngay, không cần khởi động lại server. Khoảng thời gian tính giới hạn là cố định, không chỉnh được.',
+      'Số request tối đa cho phép từ <b>mỗi địa chỉ IP</b>. Lưu xong có hiệu lực ngay.',
     rateLimitWarning:
-      'Đặt quá thấp có thể khiến chính bạn bị chặn khi thao tác liên tục. Giới hạn chung đang được <b>tắt ở môi trường development</b>.',
+      'Đặt quá thấp có thể khiến chính bạn bị chặn khi thao tác liên tục.',
     aiChatLimitLabel: 'AI Chat — số câu hỏi / {{seconds}} giây',
     generalLimitLabel: 'Toàn bộ API — số request / {{minutes}} phút',
     rangeHint: 'Cho phép {{min}}–{{max}}. Mặc định {{def}}.',
@@ -414,6 +417,20 @@ export default {
     saved: 'Đã lưu',
     saveFailed: 'Không lưu được System prompt',
     localeWarning: 'KB này không phải tiếng Việt mà chưa có prompt riêng — AI sẽ trả lời bằng tiếng Việt.',
+    greetingLabel: 'Câu chào mở đầu khung chat',
+    greetingHint: 'Để trống = dùng câu chào mặc định (chữ mờ trong ô). Câu chào hiện theo ngôn ngữ của KB, không đổi theo nút EN/VI.',
+    aiTextsTitle: 'Câu AI trả lời sẵn',
+    aiTextsDesc: 'AI gửi nguyên văn các câu này, không qua model. Để trống = dùng câu mặc định (chữ mờ trong ô) theo ngôn ngữ của KB.',
+    aiText: {
+      noAnswer: 'Khi không tìm thấy thông tin',
+      clarify: 'Khi cần hỏi lại để chọn sảnh',
+      compareAll: 'Nhãn nút "so sánh tất cả các sảnh"',
+      providerNote: 'Cảnh báo khi chưa có nội dung riêng cho sảnh được hỏi',
+    },
+    aiTextHint: {
+      clarify: 'Giữ {{placeholder}} ở chỗ muốn chèn chủ đề đang hỏi.',
+      providerNote: 'Giữ {{placeholder}} ở chỗ muốn chèn tên sảnh.',
+    },
   },
 
   // Trang Audit Log.
@@ -436,6 +453,21 @@ export default {
       userDisable: 'Khoá tài khoản',
       promotionImport: 'Nhập khuyến mãi',
       promotionProviderEdit: 'Đổi sảnh khuyến mãi',
+      systemPromptEdit: 'Sửa System prompt',
+      userDelete: 'Xoá tài khoản',
+      nodeCreate: 'Tạo thư mục/bài viết',
+      nodeEdit: 'Sửa thư mục/bài viết',
+      nodeDelete: 'Xoá thư mục/bài viết',
+      nodeMove: 'Di chuyển/sắp xếp',
+      nodePublish: 'Đăng bài viết',
+      slangCreate: 'Thêm từ lóng',
+      slangEdit: 'Sửa từ lóng',
+      slangDelete: 'Xoá từ lóng',
+      telegramApprove: 'Duyệt Telegram',
+      telegramReject: 'Từ chối Telegram',
+      telegramRevoke: 'Thu hồi quyền Telegram',
+      telegramDelete: 'Xoá tài khoản Telegram',
+      kbCreate: 'Tạo Knowledge Base',
     },
   },
 
@@ -450,6 +482,7 @@ export default {
     all: 'Tất cả',
     noTimeLimit: 'Không giới hạn thời gian',
     monthLabel: 'Tháng {{month}}/{{year}}',
+    yearLabel: 'Năm {{year}}',
     alwaysShown: 'Luôn hiển thị',
     preloaded: 'Tải sẵn khi mở trang',
     notLoadedDot: 'Chưa tải — bấm để lấy dữ liệu tháng này',
@@ -541,6 +574,10 @@ export default {
     reorderFailed: 'Lỗi khi sắp xếp lại vị trí',
     moveToRootFailed: 'Lỗi khi di chuyển ra Root',
     moveFailed: 'Lỗi khi di chuyển',
+    rootDropZone: 'Thả vào đây để đưa ra Thư mục gốc (Root)',
+    loading: 'Đang tải dữ liệu từ máy chủ...',
+    empty: 'Chưa có thư mục nào.',
+    emptyHint: 'Nhấp <b>{{button}}</b> ở trang Tài liệu để tạo.',
   },
 
   // Khung chat AI nổi ở góc màn hình.
@@ -553,6 +590,8 @@ export default {
     expand: 'Mở rộng',
     minimize: 'Thu nhỏ',
     closeChat: 'Đóng chat',
+    maximize: 'Phóng to toàn trang',
+    restoreSize: 'Thu về khung nhỏ (Esc)',
     greeting: 'Xin chào! Tôi là trợ lý AI của Knowledge Base. Bạn cần tra cứu thông tin gì?',
     cleared: 'Cuộc trò chuyện đã được làm mới. Bạn có thắc mắc nào cần giải đáp không?',
     citations: 'Trích dẫn tài liệu:',
@@ -560,10 +599,10 @@ export default {
     suggestions: 'Gợi ý liên quan:',
     inputPlaceholder: 'Nhập câu hỏi cần tra cứu...',
     send: 'Gửi câu hỏi',
-    pageGreeting:
-      'Xin chào! Tôi là trợ lý AI của Knowledge Base nội bộ. Hãy đặt câu hỏi về bất kỳ nội dung nào trong hệ thống.',
     pageError: 'Xin lỗi, đã xảy ra lỗi khi xử lý câu hỏi. Vui lòng thử lại.',
     pageInputPlaceholder: 'Đặt câu hỏi về Knowledge Base...',
+    pageSubtitle: 'Hỏi bất kỳ điều gì — AI chỉ trả lời dựa trên Knowledge Base nội bộ',
+    assistantName: 'Trợ lý AI',
     errorRateLimited:
       'Hệ thống AI đang bị giới hạn số lượng câu hỏi (quá nhiều yêu cầu trong thời gian ngắn). Vui lòng thử lại sau ít phút.',
     errorBusy: 'Hệ thống đang bận (kết nối tới cơ sở dữ liệu chập chờn). Vui lòng thử lại sau giây lát.',

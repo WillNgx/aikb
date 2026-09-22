@@ -1,10 +1,9 @@
-import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useKbList } from '../api/kb';
-import { getActiveKb, getActiveLocale, setActiveKb, setActiveLocale } from '../lib/kb';
-import { changeLocale } from '../lib/i18n';
+import { getActiveKb, setActiveKb } from '../lib/kb';
+import { syncUiLocale } from '../lib/i18n';
 
 /**
  * Chuyển giữa các Knowledge Base (mỗi ngôn ngữ một KB: VNKB, ENKB, INDKB...).
@@ -23,30 +22,13 @@ export default function KbSwitcher() {
   const navigate = useNavigate();
   const hienTai = getActiveKb();
 
-  // Đồng bộ lại ngôn ngữ giao diện theo locale của KB đang xem.
-  //
-  // Cần thiết vì ngôn ngữ được lưu riêng ở localStorage để i18n khởi tạo được TRƯỚC khi render
-  // (main.tsx), trong khi danh sách KB chỉ có sau một lượt gọi API. Nếu Admin đổi locale của
-  // một KB phía server, lần tải trang kế tiếp sẽ tự khớp lại nhờ khối này.
-  useEffect(() => {
-    const kb = ds.find((k) => k.code === hienTai);
-    if (kb && kb.locale !== getActiveLocale()) {
-      setActiveLocale(kb.locale);
-      void changeLocale(kb.locale);
-    }
-  }, [ds, hienTai]);
-
   if (ds.length < 2) return null;
 
   const doi = (code: string) => {
     if (code === hienTai) return;
-    const kb = ds.find((k) => k.code === code);
     setActiveKb(code);
-    // Ngôn ngữ giao diện BÁM THEO KB: chuyển sang ENKB là toàn bộ nhãn/nút đổi sang tiếng Anh.
-    if (kb) {
-      setActiveLocale(kb.locale);
-      void changeLocale(kb.locale);
-    }
+    // Nút EN/VI chỉ có ở VNKB, KB khác giao diện luôn tiếng Anh — áp lại ngay (xem lib/i18n.ts).
+    void syncUiLocale();
     // Xoá sạch cache: mọi dữ liệu đang giữ đều thuộc KB cũ.
     queryClient.clear();
     // Về trang danh sách tài liệu — id bài viết của KB cũ không tồn tại ở KB mới.

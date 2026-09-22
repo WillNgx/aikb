@@ -116,6 +116,38 @@
   cursor: not-allowed;
 }
 
+/* Nút con mắt nằm TRONG ô mật khẩu, bên phải — chừa padding-right để chữ không chạy dưới nút */
+.login-password-wrap {
+  position: relative;
+}
+
+.login-password-wrap .login-input {
+  padding-right: 2.75rem;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.375rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text-muted-strong);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+.login-password-toggle:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
 .login-submit {
   width: 100%;
   justify-content: center;

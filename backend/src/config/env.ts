@@ -26,6 +26,12 @@ const envSchema = z.object({
   // LƯU Ý VỀ DỮ LIỆU: câu hỏi đi qua provider này thì toàn bộ context KB nằm trong prompt sẽ đi
   // qua máy chủ bên thứ ba, khác với gọi thẳng Google.
   CUSTOM_API_KEY: z.string().optional(),
+  // Anthropic Claude — provider tuỳ chọn cho AI Chat, CHỈ chạy khi Admin chọn ở trang Cấu hình AI (không
+  // tự nhận việc dự phòng vì tính tiền theo token — xem claude.provider.ts). Thiếu key thì tự bị bỏ qua.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  // Model mặc định của Claude — Admin vẫn chọn model khác được trong UI. Chủ dự án chọn Sonnet 5
+  // ($2/$10 mỗi triệu token vào/ra) thay cho Opus 5 ($5/$25) để cân bằng chi phí.
+  CLAUDE_MODEL: z.string().default('claude-sonnet-5'),
   // Địa chỉ cổng và model mặc định để ở env cho Admin tự đổi khi chuyển nhà cung cấp, không phải
   // sửa code. Có .default() nên xoá khỏi .env cũng không làm backend chết — chỉ quay về giá trị
   // dưới đây. Thiếu CUSTOM_API_KEY thì provider tự bị bỏ qua, hai biến này thành vô nghĩa.

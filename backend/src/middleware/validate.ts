@@ -14,7 +14,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
         field: e.path.join('.'),
         message: e.message,
       }));
-      res.status(400).json({ error: 'Dữ liệu không hợp lệ', details: errors });
+      res.status(400).json({ error: 'Invalid data', details: errors });
       return;
     }
 
@@ -35,7 +35,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
         field: e.path.join('.'),
         message: e.message,
       }));
-      res.status(400).json({ error: 'Tham số không hợp lệ', details: errors });
+      res.status(400).json({ error: 'Invalid parameters', details: errors });
       return;
     }
 

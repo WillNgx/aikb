@@ -10,7 +10,7 @@ import { currentKb, kbTables } from './kb.context';
  *   - app_settings: `chat_provider`, `chat_model`, giới hạn request, tiến trình re-index.
  *     Tiến trình để chung là CỐ Ý — mọi KB dùng chung quota Gemini nên re-index phải xếp hàng
  *     tuần tự, khoá toàn cục chính là thứ ràng buộc điều đó.
- *   - kb_settings:  `relevance_threshold`, `related_links_count`, `system_prompt`.
+ *   - kb_settings:  `relevance_threshold`, `related_links_count`, `system_prompt`, `chat_greeting`.
  *
  * Vì sao ngưỡng phải theo KB: 0.6 hiện tại chọn theo phân bố điểm của tiếng Việt. Đo thực tế
  * cho thấy câu hỏi tiếng Anh khớp chunk tiếng Việt ở 0.62–0.69, tức phân bố điểm giữa các ngôn
@@ -25,6 +25,8 @@ export const KB_SETTING_KEYS = {
   relevanceThreshold: 'relevance_threshold',
   relatedLinksCount: 'related_links_count',
   systemPrompt: 'system_prompt',
+  /** Câu chào mở đầu khung chat. Rỗng = frontend dùng câu mặc định theo ngôn ngữ của KB. */
+  chatGreeting: 'chat_greeting',
 } as const;
 
 const CACHE_MS = 60_000;

@@ -57,6 +57,8 @@ export const auditActionEnum = pgEnum('audit_action', [
   'promotion_import',
   'promotion_provider_edit',
   'kb_create',
+  // Lưu ở trang System prompt: prompt, câu chào khung chat, các câu AI trả lời sẵn của một KB
+  'system_prompt_edit',
 ]);
 
 export const analyticsEventTypeEnum = pgEnum('analytics_event_type', [

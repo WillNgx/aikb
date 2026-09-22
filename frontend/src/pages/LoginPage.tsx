@@ -3,12 +3,16 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_UI_LOCALE } from "../lib/i18n";
 
 export default function LoginPage() {
-  const { t } = useTranslation();
+  // Trang Đăng nhập LUÔN tiếng Anh (quyết định của chủ dự án), không theo nút EN/VI — nút đó chỉ
+  // có sau khi đăng nhập. Từ điển tiếng Anh luôn được nạp sẵn lúc khởi động (xem lib/i18n.ts).
+  const { t } = useTranslation(undefined, { lng: DEFAULT_UI_LOCALE });
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -80,16 +84,28 @@ export default function LoginPage() {
             <label className="login-label" htmlFor="password">
               {t("login.password")}
             </label>
-            <input
-              id="password"
-              className="login-input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
+            <div className="login-password-wrap">
+              <input
+                id="password"
+                className="login-input"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
+                title={showPassword ? t("login.hidePassword") : t("login.showPassword")}
+                aria-pressed={showPassword}
+              >
+                <i className={`fa ${showPassword ? "fa-eye-slash" : "fa-eye"}`} aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           <button

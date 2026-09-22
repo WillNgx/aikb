@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useKbChatText } from '../api/kb';
 import { aiApi } from '../api';
 import type { ChatProgress as ChatProgressData } from '../api';
 import { useNavigate } from 'react-router-dom';
@@ -36,12 +37,11 @@ interface Suggestion {
 export default function ChatPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { greeting } = useKbChatText();
+  // Câu chào đầu tiên để content rỗng rồi thay lúc render: câu chào đi theo KB đang xem và có thể
+  // tới sau (danh sách KB tải xong mới biết), không cố định được lúc khởi tạo state.
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: t('chat.pageGreeting'),
-      hasAnswer: true,
-    },
+    { role: 'assistant', content: '', hasAnswer: true },
   ]);
   const [input, setInput] = useState('');
   // Bước xử lý hiện tại do backend đẩy về qua SSE; null = vừa gửi, chưa nhận event nào.
@@ -100,7 +100,7 @@ export default function ChatPage() {
           🤖 AI Chat
         </h1>
         <p className="page-subtitle">
-          Hỏi bất kỳ điều gì — AI chỉ trả lời dựa trên Knowledge Base nội bộ
+          {t('chat.pageSubtitle')}
         </p>
       </div>
 
@@ -114,11 +114,11 @@ export default function ChatPage() {
               >
                 {msg.role === 'assistant' && (
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.375rem', opacity: 0.7 }}>
-                    🤖 Trợ lý AI
+                    🤖 {t('chat.assistantName')}
                   </div>
                 )}
                 {msg.role === 'assistant' ? (
-                  <ChatMarkdown content={msg.content} />
+                  <ChatMarkdown content={i === 0 ? greeting : msg.content} />
                 ) : (
                   <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                 )}
@@ -137,7 +137,7 @@ export default function ChatPage() {
                 {msg.citations && msg.citations.length > 0 && (
                   <div className="citation-list" style={{ marginTop: '0.75rem' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                      📚 Nguồn tham khảo:
+                      📚 {t('chat.citations')}
                     </div>
                     {msg.citations.map((c, ci) => (
                       <button
@@ -162,7 +162,7 @@ export default function ChatPage() {
                 {msg.suggestions && msg.suggestions.length > 0 && (
                   <div style={{ marginTop: '0.75rem' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '0.375rem' }}>
-                      💡 Bạn có thể tham khảo:
+                      💡 {t('chat.suggestions')}
                     </div>
                     {msg.suggestions.map((s, si) => (
                       <button
@@ -212,7 +212,7 @@ export default function ChatPage() {
             disabled={chatMutation.isPending || !input.trim()}
             style={{ padding: '0.625rem 1.25rem', whiteSpace: 'nowrap' }}
           >
-            Gửi ↑
+            {t('chat.send')} ↑
           </button>
         </form>
       </div>

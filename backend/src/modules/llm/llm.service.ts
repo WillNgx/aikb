@@ -2,6 +2,7 @@ import { db } from '../../db';
 import { appSettings, customAiGateways, CustomAiGateway, NewCustomAiGateway } from '../../db/schema';
 import { eq, inArray, desc } from 'drizzle-orm';
 import { geminiProvider } from './providers/gemini.provider';
+import { claudeProvider } from './providers/claude.provider';
 import {
   customProvider,
   createCustomGatewayProvider,
@@ -32,6 +33,7 @@ const DEFAULT_CHAT_PROVIDER: ChatProviderId = 'gemini';
 const BUILTIN_PROVIDERS: Record<BuiltinChatProviderId, ChatProvider> = {
   custom: customProvider,
   gemini: geminiProvider,
+  claude: claudeProvider,
 };
 
 export async function getProvider(id: ChatProviderId): Promise<ChatProvider | undefined> {
@@ -166,7 +168,7 @@ export async function callChatModel(options: ChatCallOptions): Promise<string> {
 
   for (const { provider, model } of queue) {
     if (!provider || !provider.hasApiKey()) {
-      const keyHint = provider?.apiKeyEnvName ? `chưa cấu hình ${provider.apiKeyEnvName}` : 'chưa có API Key';
+      const keyHint = provider?.apiKeyEnvName ? `${provider.apiKeyEnvName} is not configured` : 'no API Key';
       attempts.push({ providerId: provider?.id ?? 'unknown', reason: keyHint });
       continue;
     }
@@ -286,15 +288,15 @@ export async function testChatProvider(
 ): Promise<{ ok: true; model: string; sample: string }> {
   const provider = await getProvider(providerId);
   if (!provider) {
-    throw new Error(`Không tìm thấy provider '${providerId}'`);
+    throw new Error(`Provider '${providerId}' not found`);
   }
 
   const targetModel = model?.trim() || provider.defaultModel;
 
   if (!provider.hasApiKey()) {
     const msg = provider.apiKeyEnvName
-      ? `Chưa cấu hình ${provider.apiKeyEnvName} trong file .env ở thư mục gốc`
-      : 'Cổng này chưa có API Key';
+      ? `${provider.apiKeyEnvName} is not configured in the .env file at the repo root`
+      : 'This gateway has no API Key';
     throw new Error(msg);
   }
 
@@ -320,13 +322,13 @@ export async function fetchProviderModels(
 ): Promise<{ supported: boolean; models: string[] }> {
   const provider = await getProvider(providerId);
   if (!provider) {
-    throw new Error(`Không tìm thấy provider '${providerId}'`);
+    throw new Error(`Provider '${providerId}' not found`);
   }
 
   if (!provider.hasApiKey()) {
     const msg = provider.apiKeyEnvName
-      ? `Chưa cấu hình ${provider.apiKeyEnvName} trong file .env ở thư mục gốc`
-      : 'Cổng này chưa có API Key';
+      ? `${provider.apiKeyEnvName} is not configured in the .env file at the repo root`
+      : 'This gateway has no API Key';
     throw new Error(msg);
   }
   if (!provider.listModels) {
@@ -427,7 +429,7 @@ export async function updateCustomGateway(
 ): Promise<CustomGatewayPublicItem> {
   const [existing] = await db.select().from(customAiGateways).where(eq(customAiGateways.id, id));
   if (!existing) {
-    throw new Error('Không tìm thấy cổng AI custom');
+    throw new Error('Custom AI gateway not found');
   }
 
   const updateValues: Partial<NewCustomAiGateway> = {
@@ -467,7 +469,7 @@ export async function updateCustomGateway(
 export async function deleteCustomGateway(id: string): Promise<void> {
   const [existing] = await db.select().from(customAiGateways).where(eq(customAiGateways.id, id));
   if (!existing) {
-    throw new Error('Không tìm thấy cổng AI custom');
+    throw new Error('Custom AI gateway not found');
   }
 
   await db.delete(customAiGateways).where(eq(customAiGateways.id, id));

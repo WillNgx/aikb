@@ -138,7 +138,7 @@ async function generateWithOverloadFallback(client: GoogleGenAI, params: ChatPar
         if (signal.aborted) {
           const seconds = (m === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_TIMEOUT_MS) / 1000;
           if (m === models.length - 1) {
-            throw new ProviderCallError("gemini", `${models[m]} không phản hồi sau ${seconds}s`);
+            throw new ProviderCallError("gemini", `${models[m]} did not respond within ${seconds}s`);
           }
           console.warn(`[Gemini] ${models[m]} không phản hồi sau ${seconds}s — chuyển sang bản nhẹ ${models[m + 1]}`);
           break;
@@ -160,7 +160,7 @@ async function generateWithOverloadFallback(client: GoogleGenAI, params: ChatPar
   }
 
   // Không tới được đây: vòng lặp trên luôn return hoặc throw
-  throw new ProviderCallError("gemini", "Không gọi được model Gemini nào");
+  throw new ProviderCallError("gemini", "Could not call any Gemini model");
 }
 
 export const geminiProvider: ChatProvider = {
@@ -184,7 +184,7 @@ export const geminiProvider: ChatProvider = {
   async listModels() {
     const apiKeys = getApiKeys();
     if (apiKeys.length === 0) {
-      throw new ProviderCallError('gemini', 'Chưa cấu hình GEMINI_API_KEY trong .env');
+      throw new ProviderCallError('gemini', 'GEMINI_API_KEY is not configured in .env');
     }
 
     try {
@@ -208,7 +208,7 @@ export const geminiProvider: ChatProvider = {
     if (apiKeys.length === 0) {
       throw new ProviderCallError(
         "gemini",
-        "Chưa cấu hình GEMINI_API_KEY trong .env",
+        "GEMINI_API_KEY is not configured in .env",
       );
     }
 
@@ -220,7 +220,7 @@ export const geminiProvider: ChatProvider = {
 
         const text = response.text;
         if (!text)
-          throw new ProviderCallError("gemini", "Gemini trả về nội dung rỗng");
+          throw new ProviderCallError("gemini", "Gemini returned an empty response");
 
         if (i > 0)
           console.warn(`[Gemini] Đã trả lời bằng key dự phòng #${i + 1}`);
@@ -247,7 +247,7 @@ export const geminiProvider: ChatProvider = {
     // Tất cả key Gemini đều hết quota → để llm.service chuyển sang provider khác
     throw new ProviderQuotaError(
       "gemini",
-      `Toàn bộ ${apiKeys.length} key Gemini đều hết quota. ${lastQuotaMessage}`,
+      `All ${apiKeys.length} Gemini keys are out of quota. ${lastQuotaMessage}`,
     );
   },
 };

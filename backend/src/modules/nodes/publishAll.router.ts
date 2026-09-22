@@ -17,12 +17,12 @@ router.post('/', authenticate, requireAdmin, async (req, res, next) => {
 
     if (!started) {
       return res.status(409).json({
-        message: total === 0 ? 'Không có bài Draft nào để Đăng' : 'Đang có 1 lượt Đăng toàn bộ khác chạy dở',
+        message: total === 0 ? 'No draft articles to publish' : 'Another publish-all run is in progress',
         total,
       });
     }
 
-    res.json({ message: `Đăng toàn bộ đã khởi động cho ${total} bài viết`, count: total });
+    res.json({ message: `Publish-all started for ${total} articles`, count: total });
   } catch (err) {
     next(err);
   }

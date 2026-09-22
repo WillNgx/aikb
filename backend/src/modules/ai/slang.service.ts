@@ -40,7 +40,6 @@ export interface ClarificationNeeded {
   needed: boolean;
   topic?: string;               // Chủ đề mơ hồ VD: "Luật đặc biệt"
   matchedProviders?: string[];  // Danh sách provider có nội dung liên quan
-  question?: string;            // Câu hỏi AI đặt lại cho user
 }
 
 /**
@@ -171,7 +170,6 @@ export async function detectAmbiguity(
       needed: true,
       topic,
       matchedProviders: providers,
-      question: `Chủ đề "${topic}" có quy định riêng theo từng sảnh. Bạn muốn tra cứu thông tin của sảnh nào?`,
     };
   }
 

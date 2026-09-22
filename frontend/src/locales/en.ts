@@ -26,6 +26,8 @@ export default {
   layout: {
     brandSubtitle: 'Internal Doc & AI',
     toggleTheme: 'Switch Light / Dark theme',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Show sidebar',
     switchArea: 'Switch area',
     tabDocuments: 'KB Documents',
     tabPromotions: 'Promotions',
@@ -64,6 +66,8 @@ export default {
     wrongCredentials: 'Incorrect email or password',
     connectionError: 'Connection error. Please try again.',
     footer: 'Accounts are created by an Admin. Contact your Admin if you need help.',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
   },
 
   chatProgress: {
@@ -168,10 +172,6 @@ export default {
     confirmDeleteAllTitle: 'Delete all token statistics?',
 
     providerTitle: 'AI Chat configuration (Provider & Model)',
-    providerDesc:
-      'Pick the AI service that generates answers for the AI Chat box. If the selected provider runs out of quota, the system <b>switches to another provider that still has quota</b> in this order: <b>{{order}}</b>.',
-    providerKeyNote:
-      'API keys are read from the <c>.env</c> file in the repository root — you do not enter keys here. Embeddings for Search always use Gemini and are not affected by this setting.',
     providerSaved: 'AI Chat configuration saved.',
     noApiKeyTag: '(no API key)',
     modelPlaceholder: 'Enter a model id',
@@ -191,8 +191,6 @@ export default {
 
     // Custom AI Gateways (Public Gateways)
     customGatewaysTitle: 'Custom AI Gateways (Public Gateways)',
-    customGatewaysDesc:
-      'Manage OpenAI-compatible custom AI proxy gateways. These gateways are stored in the database and can be selected as the main provider for AI Chat.',
     addCustomGateway: 'Add Custom AI Gateway',
     editCustomGateway: 'Edit Custom AI Gateway',
     createGatewayTitle: 'Add New Custom AI Gateway',
@@ -216,6 +214,11 @@ export default {
     gatewaySaved: 'Custom AI Gateway saved successfully!',
     gatewayDeleted: 'Custom AI Gateway deleted successfully!',
     gatewaySaveFailed: 'Failed to save Custom AI Gateway',
+    gatewayRequiredFields: 'Please fill in the gateway name, Base URL and default model.',
+    gatewayApiKeyRequired: 'Please enter an API Key for the new gateway',
+    gatewayLoading: 'Loading custom gateways...',
+    gatewayActionsCol: 'Actions',
+    gatewayDeleteTitle: 'Delete this gateway',
 
     thresholdTitle: 'AI similarity threshold (Relevance Threshold)',
     thresholdDesc:
@@ -234,9 +237,9 @@ export default {
 
     rateLimitTitle: 'Rate limits',
     rateLimitDesc:
-      'Maximum requests allowed from <b>each IP address</b>. Takes effect as soon as you save, with no server restart. The time window itself is fixed and cannot be changed.',
+      'Maximum requests allowed from <b>each IP address</b>. Takes effect as soon as you save.',
     rateLimitWarning:
-      'Setting this too low can block you while working. The general limit is currently <b>disabled in development</b>.',
+      'Setting this too low can block you while working.',
     aiChatLimitLabel: 'AI Chat — questions / {{seconds}} seconds',
     generalLimitLabel: 'All APIs — requests / {{minutes}} minutes',
     rangeHint: 'Allowed {{min}}–{{max}}. Default {{def}}.',
@@ -403,6 +406,20 @@ export default {
     saved: 'Saved',
     saveFailed: 'The system prompt could not be saved',
     localeWarning: 'This KB is not Vietnamese but has no prompt of its own — the AI will answer in Vietnamese.',
+    greetingLabel: 'Chat greeting message',
+    greetingHint: 'Leave empty to use the default greeting (shown in grey). The greeting follows the KB language, not the EN/VI button.',
+    aiTextsTitle: 'Fixed AI replies',
+    aiTextsDesc: 'The AI sends these sentences as they are, without calling the model. Leave empty to use the default (shown in grey) in the KB language.',
+    aiText: {
+      noAnswer: 'When no information is found',
+      clarify: 'When asking the user to pick a lounge',
+      compareAll: 'Label of the "compare all lounges" button',
+      providerNote: 'Warning when no content is tagged for the asked lounge',
+    },
+    aiTextHint: {
+      clarify: 'Keep {{placeholder}} where the asked topic should go.',
+      providerNote: 'Keep {{placeholder}} where the lounge name should go.',
+    },
   },
 
   audit: {
@@ -424,6 +441,21 @@ export default {
       userDisable: 'Account locked',
       promotionImport: 'Promotions imported',
       promotionProviderEdit: 'Promotion lounge changed',
+      systemPromptEdit: 'System prompt edited',
+      userDelete: 'Account deleted',
+      nodeCreate: 'Folder/article created',
+      nodeEdit: 'Folder/article edited',
+      nodeDelete: 'Folder/article deleted',
+      nodeMove: 'Moved/reordered',
+      nodePublish: 'Article published',
+      slangCreate: 'Slang term added',
+      slangEdit: 'Slang term edited',
+      slangDelete: 'Slang term deleted',
+      telegramApprove: 'Telegram approved',
+      telegramReject: 'Telegram rejected',
+      telegramRevoke: 'Telegram access revoked',
+      telegramDelete: 'Telegram account deleted',
+      kbCreate: 'Knowledge Base created',
     },
   },
 
@@ -437,6 +469,7 @@ export default {
     all: 'All',
     noTimeLimit: 'No time limit',
     monthLabel: '{{month}}/{{year}}',
+    yearLabel: 'Year {{year}}',
     alwaysShown: 'Always shown',
     preloaded: 'Preloaded on page open',
     notLoadedDot: 'Not loaded — click to fetch this month',
@@ -526,6 +559,10 @@ export default {
     reorderFailed: 'Could not reorder the items',
     moveToRootFailed: 'Could not move the item to the root',
     moveFailed: 'Could not move the item',
+    rootDropZone: 'Drop here to move to the root folder',
+    loading: 'Loading data from the server...',
+    empty: 'No folders yet.',
+    emptyHint: 'Click <b>{{button}}</b> on the Documents page to create one.',
   },
 
   chat: {
@@ -537,6 +574,8 @@ export default {
     expand: 'Expand',
     minimize: 'Minimise',
     closeChat: 'Close chat',
+    maximize: 'Expand to full page',
+    restoreSize: 'Restore size (Esc)',
     greeting: 'Hi! I am the Knowledge Base AI assistant. What would you like to look up?',
     cleared: 'The conversation has been reset. What would you like to ask?',
     citations: 'Sources:',
@@ -544,10 +583,10 @@ export default {
     suggestions: 'Related suggestions:',
     inputPlaceholder: 'Type your question...',
     send: 'Send question',
-    pageGreeting:
-      'Hi! I am the internal Knowledge Base AI assistant. Ask me anything about the content in this system.',
     pageError: 'Sorry, something went wrong while processing your question. Please try again.',
     pageInputPlaceholder: 'Ask about the Knowledge Base...',
+    pageSubtitle: 'Ask anything — the AI answers only from the internal Knowledge Base',
+    assistantName: 'AI Assistant',
     errorRateLimited:
       'The AI is rate limited right now (too many questions in a short time). Please try again in a few minutes.',
     errorBusy: 'The system is busy (unstable database connection). Please try again in a moment.',

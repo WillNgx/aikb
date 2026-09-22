@@ -127,6 +127,13 @@
       "when": 1789977133857,
       "tag": "0017_khoa_rls_supabase",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790065100653,
+      "tag": "0018_narrow_exiles",
+      "breakpoints": true
     }
   ]
 }

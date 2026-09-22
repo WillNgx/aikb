@@ -6,7 +6,7 @@
  */
 
 /** Danh sách provider built-in được hỗ trợ cho phần sinh câu trả lời (chat). */
-export const BUILTIN_CHAT_PROVIDER_IDS = ['custom', 'gemini'] as const;
+export const BUILTIN_CHAT_PROVIDER_IDS = ['custom', 'gemini', 'claude'] as const;
 export const CHAT_PROVIDER_IDS = BUILTIN_CHAT_PROVIDER_IDS;
 export type BuiltinChatProviderId = (typeof BUILTIN_CHAT_PROVIDER_IDS)[number];
 export type ChatProviderId = BuiltinChatProviderId | (string & {});
@@ -15,6 +15,8 @@ export type ChatProviderId = BuiltinChatProviderId | (string & {});
  * Thứ tự thử fallback mặc định khi provider đang chọn lỗi/hết quota.
  * Provider Admin chọn luôn chạy TRƯỚC, các provider dưới đây chạy sau và bỏ qua cái đã thử.
  */
+// `claude` CỐ Ý không có mặt ở đây: tính tiền theo token nên chỉ chạy khi Admin chủ động chọn làm nguồn
+// chính — không tự nhận việc mỗi khi Gemini lỗi (xem claude.provider.ts).
 export const FALLBACK_ORDER: ChatProviderId[] = ['custom', 'gemini'];
 
 export interface ChatParams {
@@ -118,7 +120,7 @@ export class AllProvidersExhaustedError extends Error {
     /** Chi tiết từng provider đã thử và lý do thất bại — dùng để log ở BE. */
     public attempts: Array<{ providerId: ChatProviderId; reason: string }>,
   ) {
-    super('Tất cả provider AI đều không phản hồi được (hết quota hoặc lỗi cấu hình)');
+    super('No AI provider could respond (quota exhausted or misconfigured)');
     this.name = 'AllProvidersExhaustedError';
   }
 }

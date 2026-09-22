@@ -93,8 +93,8 @@ export function createOpenAICompatibleProvider(config: OpenAICompatibleConfig): 
       const apiKey = config.getApiKey();
       if (!apiKey) {
         const keyMsg = config.apiKeyEnvName
-          ? `Chưa cấu hình ${config.apiKeyEnvName} trong .env`
-          : 'Chưa cấu hình API Key';
+          ? `${config.apiKeyEnvName} is not configured in .env`
+          : 'API Key is not configured';
         throw new ProviderCallError(config.id, keyMsg);
       }
 
@@ -121,7 +121,7 @@ export function createOpenAICompatibleProvider(config: OpenAICompatibleConfig): 
 
         const message =
           err instanceof Error && err.name === 'AbortError'
-            ? `Quá thời gian chờ ${requestTimeoutMs / 1000}s`
+            ? `Timed out after ${requestTimeoutMs / 1000}s`
             : err instanceof Error
               ? err.message
               : String(err);
@@ -141,8 +141,8 @@ export function createOpenAICompatibleProvider(config: OpenAICompatibleConfig): 
       const apiKey = config.getApiKey();
       if (!apiKey) {
         const keyMsg = config.apiKeyEnvName
-          ? `Chưa cấu hình ${config.apiKeyEnvName} trong .env`
-          : 'Chưa cấu hình API Key';
+          ? `${config.apiKeyEnvName} is not configured in .env`
+          : 'API Key is not configured';
         throw new ProviderCallError(config.id, keyMsg);
       }
 
@@ -186,7 +186,7 @@ export function createOpenAICompatibleProvider(config: OpenAICompatibleConfig): 
         if (!text) {
           throw new ProviderCallError(
             config.id,
-            data.error?.message ?? 'Provider trả về nội dung rỗng',
+            data.error?.message ?? 'Provider returned an empty response',
           );
         }
 
@@ -196,7 +196,7 @@ export function createOpenAICompatibleProvider(config: OpenAICompatibleConfig): 
 
         const message =
           err instanceof Error && err.name === 'AbortError'
-            ? `Quá thời gian chờ ${requestTimeoutMs / 1000}s`
+            ? `Timed out after ${requestTimeoutMs / 1000}s`
             : err instanceof Error
               ? err.message
               : String(err);
@@ -234,7 +234,7 @@ export function createCustomGatewayProvider(gateway: {
 
 export const customProvider = createOpenAICompatibleProvider({
   id: 'custom',
-  label: 'Cổng trung chuyển (tự cấu hình)',
+  label: 'Relay gateway (self-configured)',
   // baseUrl và model mặc định lấy từ .env (CUSTOM_BASE_URL / CUSTOM_MODEL) để đổi nhà cung cấp
   // không phải sửa code — chỉ sửa .env rồi khởi động lại backend.
   baseUrl: env.CUSTOM_BASE_URL,

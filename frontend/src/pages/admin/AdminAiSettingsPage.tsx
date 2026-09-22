@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
+import i18n from '../../lib/i18n';
 import { adminApi } from '../../api';
 import type {
   AIProviderSettings,
@@ -36,7 +37,7 @@ function formatCompact(n: number): string {
 }
 
 function formatFull(n: number): string {
-  return n.toLocaleString('vi-VN');
+  return n.toLocaleString(i18n.language === 'en' ? 'en-GB' : 'vi-VN');
 }
 
 /** '2026-09-08' -> '08/09', '2026-09' -> '09/2026'. */
@@ -438,6 +439,11 @@ export default function AdminAiSettingsPage() {
   });
 
   // Custom AI Gateways queries & mutations
+  // Thống kê token lưu cổng custom dưới dạng mã `custom_<id>` — hiện tên cổng cho dễ đọc. Cổng đã
+  // bị xoá thì không còn tên để tra, giữ nguyên mã.
+  const providerName = (id: string) =>
+    customGatewaysData?.gateways.find((g) => `custom_${g.id}` === id)?.name ?? id;
+
   const { data: customGatewaysData, isLoading: customGatewaysLoading } = useQuery<{ gateways: CustomAIGateway[] }>({
     queryKey: ['admin-ai-gateways'],
     queryFn: adminApi.listCustomAIGateways,
@@ -566,11 +572,11 @@ export default function AdminAiSettingsPage() {
 
   const handleSaveGateway = () => {
     if (!gatewayForm.name.trim() || !gatewayForm.baseUrl.trim() || !gatewayForm.defaultModel.trim()) {
-      setGatewayFormError(t('adminSlang.requiredFields') || 'Vui lòng điền đủ các trường bắt buộc');
+      setGatewayFormError(t('adminAi.gatewayRequiredFields'));
       return;
     }
     if (!editingGatewayId && !gatewayForm.apiKey.trim()) {
-      setGatewayFormError('Vui lòng nhập API Key cho cổng mới');
+      setGatewayFormError(t('adminAi.gatewayApiKeyRequired'));
       return;
     }
 
@@ -784,7 +790,7 @@ export default function AdminAiSettingsPage() {
                   }}
                 >
                   <span style={{ wordBreak: 'break-all' }}>
-                    <strong>{m.provider}</strong> / {m.model}
+                    <strong>{providerName(m.provider)}</strong> / {m.model}
                   </span>
                   <span style={{ whiteSpace: 'nowrap', color: 'var(--color-text-muted-strong)' }}>
                     {t('adminAi.modelUsage', { tokens: formatFull(m.totalTokens), requests: m.requestCount })}
@@ -799,17 +805,6 @@ export default function AdminAiSettingsPage() {
       {/* Config: AI Chat Provider */}
       <div className="card-custom card-section">
         <h3 className="card-section-title">🤖 {t('adminAi.providerTitle')}</h3>
-        <p className="card-section-desc">
-          <Trans
-            i18nKey="adminAi.providerDesc"
-            values={{ order: aiProviderData?.fallbackOrder.join(' → ') ?? '...' }}
-            components={{ b: <strong /> }}
-          />
-          <br />
-          <span style={{ fontSize: '0.8125rem' }}>
-            <Trans i18nKey="adminAi.providerKeyNote" components={{ c: <code /> }} />
-          </span>
-        </p>
 
         {aiProviderMsg && (
           <div className="alert-box alert-success" role="status" style={{ marginBottom: '1rem' }}>
@@ -947,10 +942,7 @@ export default function AdminAiSettingsPage() {
       <div className="card-custom card-section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
-            <h3 className="card-section-title" style={{ marginBottom: '0.25rem' }}>🌐 {t('adminAi.customGatewaysTitle')}</h3>
-            <p className="card-section-desc" style={{ marginBottom: 0 }}>
-              {t('adminAi.customGatewaysDesc')}
-            </p>
+            <h3 className="card-section-title" style={{ marginBottom: 0 }}>🌐 {t('adminAi.customGatewaysTitle')}</h3>
           </div>
           <button
             id="btn-add-custom-gateway"
@@ -1151,7 +1143,7 @@ export default function AdminAiSettingsPage() {
 
         {/* Gateways Table */}
         {customGatewaysLoading ? (
-          <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>⏳ Đang tải danh sách cổng custom...</div>
+          <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>⏳ {t('adminAi.gatewayLoading')}</div>
         ) : (customGatewaysData?.gateways.length ?? 0) === 0 ? (
           <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', fontStyle: 'italic', padding: '0.75rem 0' }}>
             {t('adminAi.gatewayNoGateways')}
@@ -1166,7 +1158,7 @@ export default function AdminAiSettingsPage() {
                   <th style={{ padding: '0.5rem 0.75rem' }}>{t('adminAi.gatewayDefaultModelLabel')}</th>
                   <th style={{ padding: '0.5rem 0.75rem' }}>API Key</th>
                   <th style={{ padding: '0.5rem 0.75rem' }}>{t('adminAi.gatewayStatusLabel')}</th>
-                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>Thao tác</th>
+                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{t('adminAi.gatewayActionsCol')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1203,16 +1195,16 @@ export default function AdminAiSettingsPage() {
                           onClick={() => openEditGatewayForm(g)}
                           title={t('adminAi.editCustomGateway')}
                         >
-                          ✏️ Sửa
+                          ✏️ {t('common.edit')}
                         </button>
                         <button
                           type="button"
                           className="btn-ghost btn-sm"
                           style={{ color: 'var(--color-danger)' }}
                           onClick={() => handleDeleteGateway(g)}
-                          title="Xóa cổng này"
+                          title={t('adminAi.gatewayDeleteTitle')}
                         >
-                          🗑️ Xóa
+                          🗑️ {t('common.delete')}
                         </button>
                       </div>
                     </td>

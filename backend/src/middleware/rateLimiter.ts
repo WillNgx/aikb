@@ -117,7 +117,7 @@ export const aiChatLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error:
-      "Quá nhiều câu hỏi trong thời gian ngắn. Vui lòng thử lại sau 1 phút.",
+      "Too many questions in a short time. Please try again in 1 minute.",
   },
 });
 
@@ -134,6 +134,6 @@ export const generalLimiter = rateLimit({
   // Production vẫn giữ giới hạn như cấu hình Admin đặt.
   skip: () => env.NODE_ENV === "development",
   message: {
-    error: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+    error: "Too many requests. Please try again later.",
   },
 });

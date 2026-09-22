@@ -98,7 +98,7 @@ export async function listActiveKbs(): Promise<KbInfo[]> {
 export async function getKb(code: string): Promise<KbInfo> {
   const map = await loadRegistry();
   const kb = map.get(code);
-  if (!kb || !kb.isActive) throw notFound(`Không tìm thấy Knowledge Base "${code}"`);
+  if (!kb || !kb.isActive) throw notFound(`Knowledge Base "${code}" not found`);
   return kb;
 }
 

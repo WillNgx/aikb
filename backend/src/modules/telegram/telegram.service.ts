@@ -222,7 +222,7 @@ export async function countPending(): Promise<number> {
 
 export class TelegramUserNotFoundError extends Error {
   constructor() {
-    super('Không tìm thấy tài khoản Telegram này');
+    super('Telegram account not found');
     this.name = 'TelegramUserNotFoundError';
   }
 }
@@ -258,7 +258,7 @@ async function setStatus(
 
   if (existing.status === next) {
     throw new TelegramUserStateError(
-      next === 'approved' ? 'Tài khoản này đã được duyệt rồi' : 'Tài khoản này đã bị từ chối rồi'
+      next === 'approved' ? 'This account has already been approved' : 'This account has already been rejected'
     );
   }
 
@@ -311,7 +311,7 @@ export async function revokeTelegramUser(id: string, actor: { id: string; email:
   const [existing] = await db.select().from(telegramUsers).where(eq(telegramUsers.id, id)).limit(1);
   if (!existing) throw new TelegramUserNotFoundError();
   if (existing.status !== 'approved') {
-    throw new TelegramUserStateError('Chỉ thu hồi được quyền của tài khoản đang được duyệt');
+    throw new TelegramUserStateError('Only approved accounts can be revoked');
   }
   return setStatus(id, 'rejected', AUDIT_ACTION.revoked, actor);
 }
@@ -330,7 +330,7 @@ export async function setTelegramUserKb(
   const [existing] = await db.select().from(telegramUsers).where(eq(telegramUsers.id, id)).limit(1);
   if (!existing) throw new TelegramUserNotFoundError();
   if (!(await isValidKb(kbCode))) {
-    throw new TelegramUserStateError(`Knowledge Base "${kbCode}" không tồn tại hoặc đã tắt`);
+    throw new TelegramUserStateError(`Knowledge Base "${kbCode}" does not exist or is disabled`);
   }
 
   const [updated] = await db

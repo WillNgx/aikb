@@ -16,9 +16,9 @@ router.use(authenticate, requireAdmin);
 // ─── Validation Schemas ───────────────────────────────────────────────────────
 
 const createSlangSchema = z.object({
-  slangTerm: z.string().min(1, 'Từ lóng không được trống').max(200).trim()
+  slangTerm: z.string().min(1, 'Slang term is required').max(200).trim()
     .transform((s) => s.toLowerCase()),
-  normalizedEntity: z.string().min(1, 'Thuật ngữ chuẩn không được trống').max(200).trim(),
+  normalizedEntity: z.string().min(1, 'Standard term is required').max(200).trim(),
   targetType: z.enum(['provider', 'bet_type', 'platform', 'category', 'general']).default('general'),
   notes: z.string().max(1000).optional(),
   isActive: z.boolean().default(true),
@@ -121,7 +121,7 @@ router.patch('/:id', validateBody(updateSlangSchema), async (req, res, next) => 
       .limit(1);
 
     if (!existing) {
-      res.status(404).json({ error: 'Không tìm thấy từ lóng này' });
+      res.status(404).json({ error: 'Slang term not found' });
       return;
     }
 
@@ -161,7 +161,7 @@ router.delete('/:id', async (req, res, next) => {
       .limit(1);
 
     if (!existing) {
-      res.status(404).json({ error: 'Không tìm thấy từ lóng này' });
+      res.status(404).json({ error: 'Slang term not found' });
       return;
     }
 

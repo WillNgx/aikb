@@ -46,9 +46,9 @@ export function currentKb(): KbContext {
   const ctx = storage.getStore();
   if (!ctx) {
     throw new Error(
-      '[KB] Không xác định được Knowledge Base cho luồng xử lý hiện tại. ' +
-        'Mọi truy vấn dữ liệu nội dung phải nằm trong runWithKb(). ' +
-        'Nếu đây là tác vụ nền hoặc script, hãy tự mở ngữ cảnh KB trước khi gọi service.'
+      '[KB] No Knowledge Base context for the current execution flow. ' +
+        'Every content query must run inside runWithKb(). ' +
+        'Background jobs and scripts must open a KB context themselves before calling services.'
     );
   }
   return ctx;

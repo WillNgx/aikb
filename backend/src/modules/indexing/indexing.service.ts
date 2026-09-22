@@ -495,7 +495,7 @@ async function embedOneWithRetry(text: string, maxRetries = 5): Promise<number[]
       throw err;
     }
   }
-  throw new Error('embedOneWithRetry: vượt quá số lần retry');
+  throw new Error('embedOneWithRetry: exceeded the maximum number of retries');
 }
 
 /**
