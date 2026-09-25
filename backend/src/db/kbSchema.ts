@@ -226,6 +226,10 @@ export function makeKbTables(schemaName: string | null, deps: KbTableDeps) {
       // Phiên bản mới nhất. Để uuid TRẦN, không đặt FK: hai bảng tham chiếu vòng tròn lẫn nhau
       // sẽ làm thứ tự INSERT bị kẹt (phải có version trước mới có promotion và ngược lại).
       latestVersionId: uuid('latest_version_id'),
+      // Tag của ĐỢT NHẬP GẦN NHẤT CÓ THAY ĐỔI: 'new' (khuyến mãi mới) | 'new_version' (có phiên
+      // bản mới) | null. Mỗi đợt nhập có thay đổi sẽ gỡ sạch tag cũ rồi gắn lại; đợt nhập không
+      // có gì mới thì giữ nguyên tag cũ — xem `gắn tag` trong promotions.service.ts.
+      importTag: text('import_tag'),
       createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     },
@@ -233,6 +237,7 @@ export function makeKbTables(schemaName: string | null, deps: KbTableDeps) {
       index('promotions_start_month_idx').on(table.startMonth),
       index('promotions_category_idx').on(table.category),
       index('promotions_provider_idx').on(table.provider),
+      index('promotions_import_tag_idx').on(table.importTag),
     ]
   );
 

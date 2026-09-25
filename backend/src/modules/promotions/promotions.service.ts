@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../db';
 import { appSettings, auditLogs, type Promotion } from '../../db/schema';
 import { currentKb, kbTables } from '../kb/kb.context';
@@ -31,6 +31,11 @@ import {
 
 const ROOT_FOLDER = 'Khuyến mãi';
 const PROGRESS_KEY = 'promotion_import_progress';
+
+/** Giá trị của cột `promotions.import_tag`. */
+export const TAG_MOI = 'new';
+export const TAG_VERSION_MOI = 'new_version';
+export type ImportTag = typeof TAG_MOI | typeof TAG_VERSION_MOI;
 /** Nhóm cho khuyến mãi không ghi thời hạn (toàn bộ nhóm Hoàn trả rơi vào đây). */
 export const KHONG_HAN = 'khong-han';
 
@@ -219,6 +224,9 @@ export async function commitImport(
   const now = new Date();
   const diff: ImportDiff = { total: items.length, created: [], versioned: [], unchangedCount: 0, invalid: [] };
   const canMirror: string[] = []; // id các promotion cần dựng lại bài mirror
+  // id để gắn tag New / New version sau khi ghi xong — xem ganTagDotNhap()
+  const idMoi: string[] = [];
+  const idCoVersionMoi: string[] = [];
   const daGap = new Set<string>();
 
   for (const item of items) {
@@ -250,6 +258,7 @@ export async function commitImport(
       await db.update(promotions).set({ latestVersionId: verId, updatedAt: now }).where(eq(promotions.id, moi.id));
       diff.created.push({ title: item.title, provider: c.provider, versionLabel: c.label });
       canMirror.push(moi.id);
+      idMoi.push(moi.id);
       continue;
     }
 
@@ -280,7 +289,10 @@ export async function commitImport(
 
     diff.versioned.push({ title: item.title, provider: c.provider, versionLabel: c.label });
     canMirror.push(hienCo.id);
+    idCoVersionMoi.push(hienCo.id);
   }
+
+  await ganTagDotNhap(idMoi, idCoVersionMoi);
 
   await db.insert(auditLogs).values({
     action: 'promotion_import',
@@ -302,6 +314,31 @@ export async function commitImport(
   else void mirror;
 
   return diff;
+}
+
+/**
+ * Gắn tag cho đợt nhập vừa chạy.
+ *
+ * Quy tắc (theo yêu cầu của chủ dự án): đợt nhập có khuyến mãi mới hoặc có phiên bản mới thì GỠ
+ * SẠCH tag cũ của KB rồi gắn lại cho đúng những khuyến mãi vừa thay đổi. Đợt nhập không có gì
+ * mới thì GIỮ NGUYÊN tag cũ — nhờ vậy nhập lại một file không có thay đổi không làm mất dấu đợt
+ * nhập gần nhất thực sự có nội dung mới.
+ */
+async function ganTagDotNhap(idMoi: string[], idCoVersionMoi: string[]): Promise<void> {
+  if (idMoi.length === 0 && idCoVersionMoi.length === 0) return;
+
+  const { promotions } = kbTables();
+  await db.update(promotions).set({ importTag: null }).where(isNotNull(promotions.importTag));
+
+  if (idMoi.length) {
+    await db.update(promotions).set({ importTag: TAG_MOI }).where(inArray(promotions.id, idMoi));
+  }
+  if (idCoVersionMoi.length) {
+    await db
+      .update(promotions)
+      .set({ importTag: TAG_VERSION_MOI })
+      .where(inArray(promotions.id, idCoVersionMoi));
+  }
 }
 
 async function themVersion(
@@ -573,13 +610,31 @@ export interface PromotionListItem {
   // chọn được. Chỉ 3 cột nên không làm nặng truy vấn danh sách.
   versions: VersionChip[];
   nodeId: string | null;
+  /** Tag của đợt nhập gần nhất có thay đổi: 'new' | 'new_version' | null. */
+  importTag: ImportTag | null;
 }
 
 /**
  * Danh sách khuyến mãi của MỘT tháng. Trang chỉ nạp sẵn 2 tháng gần nhất, tháng cũ hơn gọi lại
  * hàm này khi người dùng bấm — để mở trang không phải kéo toàn bộ lịch sử về.
  */
-export async function listByMonth(month: string): Promise<PromotionListItem[]> {
+export function listByMonth(month: string): Promise<PromotionListItem[]> {
+  const { promotions } = kbTables();
+  return truyVanDanhSach(eq(promotions.startMonth, month));
+}
+
+/**
+ * Danh sách khuyến mãi đang mang tag của đợt nhập gần nhất (mục "New" trên trang Khuyến mãi).
+ *
+ * Lọc THẲNG theo tag trong DB chứ không tải hết các tháng rồi lọc ở trình duyệt: khuyến mãi được
+ * gắn tag có thể nằm ở tháng cũ, và cách này không nặng thêm khi dữ liệu nhiều lên.
+ */
+export function listTagged(): Promise<PromotionListItem[]> {
+  const { promotions } = kbTables();
+  return truyVanDanhSach(isNotNull(promotions.importTag));
+}
+
+async function truyVanDanhSach(dieuKien: SQL | undefined): Promise<PromotionListItem[]> {
   const { promotions, promotionVersions } = kbTables();
   const rows = await db
     .select({
@@ -594,7 +649,7 @@ export async function listByMonth(month: string): Promise<PromotionListItem[]> {
     })
     .from(promotions)
     .leftJoin(promotionVersions, eq(promotionVersions.id, promotions.latestVersionId))
-    .where(eq(promotions.startMonth, month));
+    .where(dieuKien);
 
   return rows
     .map(({ p, v, versionCount, versions }) => ({
@@ -611,6 +666,7 @@ export async function listByMonth(month: string): Promise<PromotionListItem[]> {
       versionCount: Number(versionCount),
       versions: versions ?? [],
       nodeId: p.nodeId,
+      importTag: (p.importTag as ImportTag | null) ?? null,
     }))
     .sort((a, b) => String(b.startDate ?? '').localeCompare(String(a.startDate ?? '')) || a.title.localeCompare(b.title, 'vi'));
 }
@@ -659,6 +715,7 @@ export async function getPromotionDetail(id: string, versionId?: string): Promis
     versionLabel: chon.versionLabel,
     versionCount: vers.length,
     nodeId: p.nodeId,
+    importTag: (p.importTag as ImportTag | null) ?? null,
     content: chon.content,
     versions: vers.map((v) => ({
       id: v.id,

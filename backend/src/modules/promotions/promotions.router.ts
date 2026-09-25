@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth';
 import { providerOptions } from './promotionContent.util';
-import { getPromotionDetail, listByMonth, listMonths } from './promotions.service';
+import { getPromotionDetail, listByMonth, listMonths, listTagged } from './promotions.service';
 
 const router = Router();
 
@@ -34,6 +34,15 @@ router.get('/', async (req, res, next) => {
       return;
     }
     res.json({ items: await listByMonth(month) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Khuyến mãi được gắn tag ở đợt nhập gần nhất — mục 'New' trên trang Khuyến mãi. */
+router.get('/new', async (_req, res, next) => {
+  try {
+    res.json({ items: await listTagged() });
   } catch (err) {
     next(err);
   }

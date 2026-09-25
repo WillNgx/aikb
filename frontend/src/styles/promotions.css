@@ -276,6 +276,13 @@
   border-color: transparent;
   font-weight: 600;
 }
+/* Nhãn "New" / "New version" của đợt nhập gần nhất — xem promotions.service.ts */
+.promo-tag-new {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--color-success);
+  border-color: transparent;
+  font-weight: 600;
+}
 .promo-card h3 {
   margin: 0 0 0.5rem;
   font-size: var(--fs-base);

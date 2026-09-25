@@ -43,6 +43,8 @@ export interface PromotionListItem {
   /** Mới nhất đứng đầu — để thẻ hiện dãy nhãn phiên bản và bấm thẳng vào một bản cũ. */
   versions: VersionChip[];
   nodeId: string | null;
+  /** Tag của đợt nhập gần nhất có thay đổi — dùng cho mục "New" và nhãn trên thẻ. */
+  importTag: 'new' | 'new_version' | null;
 }
 
 export interface PromotionVersionSummary {
@@ -93,6 +95,10 @@ export const promotionsApi = {
 
   byMonth: (month: string): Promise<PromotionListItem[]> =>
     api.get('/promotions', { params: { month } }).then((r) => r.data.items),
+
+  /** Khuyến mãi mang tag của đợt nhập gần nhất — lấy thẳng theo tag, không phụ thuộc tháng đã tải. */
+  tagged: (): Promise<PromotionListItem[]> =>
+    api.get('/promotions/new').then((r) => r.data.items),
 
   detail: (id: string, versionId?: string): Promise<PromotionDetail> =>
     api.get(`/promotions/${id}`, { params: versionId ? { versionId } : undefined }).then((r) => r.data),

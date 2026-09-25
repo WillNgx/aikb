@@ -24,6 +24,12 @@ import { useAlert } from '../components/ConfirmModal';
  * nhất — ẩn sau một nút bấm là hỏng việc.
  */
 
+/**
+ * Giá trị riêng cho mục "New" ở cột danh mục. Đặt tiền tố "__" để không bao giờ đụng tên một
+ * danh mục thật (danh mục lấy nguyên văn từ dữ liệu nguồn: Nổi bật, Hoàn trả...).
+ */
+const DANH_MUC_MOI = '__new__';
+
 // ─── Tiện ích ─────────────────────────────────────────────────────────────────
 
 function boDau(s: string): string {
@@ -235,6 +241,11 @@ function PromotionCard({
         {km.versionCount > 1 && (
           <span className="promo-tag promo-tag-version">
             {t('promo.versionCount', { n: km.versionCount })}
+          </span>
+        )}
+        {km.importTag && (
+          <span className="promo-tag promo-tag-new">
+            {t(km.importTag === 'new' ? 'promo.tagNew' : 'promo.tagNewVersion')}
           </span>
         )}
       </div>
@@ -648,6 +659,7 @@ export default function PromotionsPage() {
   const [thangDangChon, setThangDangChon] = useState<string>('tat-ca');
   const [danhMucDangChon, setDanhMucDangChon] = useState<string>('tat-ca');
   const [tuKhoa, setTuKhoa] = useState('');
+  // Các năm luôn ĐÓNG khi mới mở trang (yêu cầu của chủ dự án) — cố ý không nhớ trạng thái này.
   const [namMo, setNamMo] = useState<Record<string, boolean>>({});
   const [chiTiet, setChiTiet] = useState<{ id: string; versionId?: string } | null>(null);
   const [moNhap, setMoNhap] = useState(false);
@@ -657,13 +669,20 @@ export default function PromotionsPage() {
     queryFn: promotionsApi.months,
   });
 
+  // Khuyến mãi của đợt nhập gần nhất. Lấy riêng theo tag nên không phải tải hết các tháng mới
+  // lọc ra được — khuyến mãi được gắn tag có thể nằm ở tháng cũ.
+  const { data: dsMoi = [] } = useQuery({
+    queryKey: ['promo-new'],
+    queryFn: promotionsApi.tagged,
+    staleTime: 60_000,
+  });
+
   // Mặc định mở 2 tháng gần nhất + nhóm không giới hạn thời gian.
   useEffect(() => {
     if (!months) return;
     const macDinh = months.months.slice(0, 2).map((m) => m.key);
     if (months.khongHan > 0) macDinh.push(KHONG_HAN);
     setThangDaMo((truoc) => Array.from(new Set([...truoc, ...macDinh])));
-    setNamMo((truoc) => ({ ...Object.fromEntries(months.months.map((m) => [m.nam, true])), ...truoc }));
   }, [months]);
 
   const ketQua = useQueries({
@@ -692,7 +711,9 @@ export default function PromotionsPage() {
   const loc = (ds: PromotionListItem[]): PromotionListItem[] => {
     const tk = boDau(tuKhoa.trim());
     return ds.filter((k) => {
-      if (danhMucDangChon !== 'tat-ca' && k.category !== danhMucDangChon) return false;
+      if (danhMucDangChon !== 'tat-ca' && danhMucDangChon !== DANH_MUC_MOI && k.category !== danhMucDangChon) {
+        return false;
+      }
       if (!tk) return true;
       return boDau(`${k.title} ${k.summary ?? ''} ${k.provider ?? ''}`).includes(tk);
     });
@@ -705,6 +726,7 @@ export default function PromotionsPage() {
 
   const lamMoiDanhSach = () => {
     queryClient.invalidateQueries({ queryKey: ['promo-month'] });
+    queryClient.invalidateQueries({ queryKey: ['promo-new'] });
     queryClient.invalidateQueries({ queryKey: ['promo-months'] });
   };
 
@@ -835,6 +857,16 @@ export default function PromotionsPage() {
               <span className="promo-label">{t('promo.all')}</span>
               <span className="promo-count">{tatCaDaTai.length}</span>
             </button>
+            {dsMoi.length > 0 && (
+              <button
+                type="button"
+                className={`promo-row${danhMucDangChon === DANH_MUC_MOI ? ' active' : ''}`}
+                onClick={() => setDanhMucDangChon(DANH_MUC_MOI)}
+              >
+                <span className="promo-label">{t('promo.categoryNew')}</span>
+                <span className="promo-count">{dsMoi.length}</span>
+              </button>
+            )}
             {danhMucCo.map((dm) => (
               <button
                 key={dm}
@@ -852,7 +884,35 @@ export default function PromotionsPage() {
         <main className="promo-main">
           {dangTaiThang && <div className="spinner-custom mx-auto" />}
 
-          {nhomHienThi.map((key) => {
+          {/* Mục "New": danh sách lấy thẳng theo tag nên không theo tháng, hiện thành 1 nhóm. */}
+          {danhMucDangChon === DANH_MUC_MOI ? (
+            <section className="promo-month">
+              <div className="promo-month-head">
+                <h2>{t('promo.categoryNew')}</h2>
+                <span className="promo-count">{loc(dsMoi).length}</span>
+                <span className="promo-soft-badge">{t('promo.newGroupHint')}</span>
+              </div>
+              {loc(dsMoi).length === 0 ? (
+                <div className="promo-empty">
+                  <strong>{t('promo.emptyTitle')}</strong>
+                  <div>{t('promo.emptyDesc')}</div>
+                </div>
+              ) : (
+                <div className="promo-grid">
+                  {loc(dsMoi).map((km) => (
+                    <PromotionCard
+                      key={km.id}
+                      km={km}
+                      isAdmin={isAdmin}
+                      onOpen={(versionId) => setChiTiet({ id: km.id, versionId })}
+                      onChanged={lamMoiDanhSach}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : (
+            nhomHienThi.map((key) => {
             const daMo = thangDaMo.includes(key);
             const viTri = thangDaMo.indexOf(key);
             const dangTai = daMo && ketQua[viTri]?.isLoading;
@@ -912,8 +972,9 @@ export default function PromotionsPage() {
                   </div>
                 )}
               </section>
-            );
-          })}
+              );
+            })
+          )}
         </main>
       </div>
 
