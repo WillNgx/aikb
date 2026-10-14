@@ -34,6 +34,9 @@ export interface PromotionListItem {
   category: string;
   provider: string | null;
   providerLocked: boolean;
+  /** Code / Name Code nội bộ — null là còn thiếu. */
+  code: string | null;
+  codeName: string | null;
   startMonth: string;
   startDate: string | null;
   timeText: string | null;
@@ -99,6 +102,14 @@ export const promotionsApi = {
   /** Khuyến mãi mang tag của đợt nhập gần nhất — lấy thẳng theo tag, không phụ thuộc tháng đã tải. */
   tagged: (): Promise<PromotionListItem[]> =>
     api.get('/promotions/new').then((r) => r.data.items),
+
+  /** Khuyến mãi còn thiếu Code hoặc Name Code — mục "Chưa hoàn thiện". */
+  incomplete: (): Promise<PromotionListItem[]> =>
+    api.get('/promotions/incomplete').then((r) => r.data.items),
+
+  /** Mọi người dùng đã đăng nhập đều sửa được (không chỉ Admin). */
+  setCodes: (id: string, code: string | null, codeName: string | null): Promise<void> =>
+    api.patch(`/promotions/${id}/codes`, { code, codeName }).then(() => undefined),
 
   detail: (id: string, versionId?: string): Promise<PromotionDetail> =>
     api.get(`/promotions/${id}`, { params: versionId ? { versionId } : undefined }).then((r) => r.data),

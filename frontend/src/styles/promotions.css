@@ -290,15 +290,49 @@
   line-height: var(--lh-tight);
   letter-spacing: -0.01em;
 }
-.promo-card .promo-excerpt {
-  margin: 0;
-  font-size: var(--fs-sm);
+/* 2 dòng Code / Name Code ngay dưới tên khuyến mãi (thẻ + hộp chi tiết) */
+.promo-codes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0.25rem 0 0.375rem;
+  font-size: var(--fs-xs);
+}
+.promo-code-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.promo-code-label {
+  flex: 0 0 4.75rem;
+  color: var(--color-text-muted);
+}
+.promo-code-value {
+  min-width: 0;
+  font-family: var(--bs-font-monospace);
+  font-weight: 600;
   color: var(--color-text-muted-strong);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.promo-badge-missing {
+  padding: 1px 0.5rem;
+  border-radius: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+[data-bs-theme="dark"] .promo-badge-missing {
+  color: #fca5a5;
+}
+.promo-count.promo-count-danger {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+  border-color: transparent;
+}
+[data-bs-theme="dark"] .promo-count.promo-count-danger {
+  color: #fca5a5;
 }
 .promo-card .promo-meta {
   margin-top: 0.7rem;
@@ -390,7 +424,8 @@ button.promo-provider:hover {
 .promo-card-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
 }
 .promo-card-actions .btn-secondary-custom {
   flex: 1;
@@ -476,6 +511,13 @@ button.promo-provider:hover {
   border-radius: 0.875rem;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+}
+.promo-modal.promo-modal-sm {
+  width: min(32rem, 100%);
+}
+/* <form> bọc thân + chân hộp không được phá bố cục flex của .promo-modal */
+.promo-modal > form {
+  display: contents;
 }
 .promo-modal-head {
   display: flex;

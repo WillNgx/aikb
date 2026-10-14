@@ -230,6 +230,11 @@ export function makeKbTables(schemaName: string | null, deps: KbTableDeps) {
       // bản mới) | null. Mỗi đợt nhập có thay đổi sẽ gỡ sạch tag cũ rồi gắn lại; đợt nhập không
       // có gì mới thì giữ nguyên tag cũ — xem `gắn tag` trong promotions.service.ts.
       importTag: text('import_tag'),
+      // Code / Name Code nội bộ của khuyến mãi — người dùng nhập tay (hoặc nạp từ Excel), KHÔNG lấy
+      // từ nội dung M88 nên đợt nhập dữ liệu mới không bao giờ ghi đè. Thiếu 1 trong 2 thì khuyến
+      // mãi rơi vào mục "Chưa hoàn thiện".
+      code: text('code'),
+      codeName: text('code_name'),
       createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     },

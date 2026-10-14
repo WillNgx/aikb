@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../db';
 import { appSettings, auditLogs, type Promotion } from '../../db/schema';
 import { currentKb, kbTables } from '../kb/kb.context';
@@ -599,6 +599,9 @@ export interface PromotionListItem {
   category: string;
   provider: string | null;
   providerLocked: boolean;
+  /** Code / Name Code nội bộ — null là còn thiếu (thẻ hiện badge THIẾU). */
+  code: string | null;
+  codeName: string | null;
   startMonth: string;
   startDate: string | null;
   timeText: string | null;
@@ -634,6 +637,12 @@ export function listTagged(): Promise<PromotionListItem[]> {
   return truyVanDanhSach(isNotNull(promotions.importTag));
 }
 
+/** Khuyến mãi còn thiếu Code hoặc Name Code — mục "Chưa hoàn thiện" trên trang Khuyến mãi. */
+export function listIncomplete(): Promise<PromotionListItem[]> {
+  const { promotions } = kbTables();
+  return truyVanDanhSach(or(isNull(promotions.code), isNull(promotions.codeName)));
+}
+
 async function truyVanDanhSach(dieuKien: SQL | undefined): Promise<PromotionListItem[]> {
   const { promotions, promotionVersions } = kbTables();
   const rows = await db
@@ -658,6 +667,8 @@ async function truyVanDanhSach(dieuKien: SQL | undefined): Promise<PromotionList
       category: p.category,
       provider: p.provider,
       providerLocked: p.providerLocked,
+      code: p.code,
+      codeName: p.codeName,
       startMonth: p.startMonth,
       startDate: v?.startDate ?? null,
       timeText: v?.timeText ?? null,
@@ -708,6 +719,8 @@ export async function getPromotionDetail(id: string, versionId?: string): Promis
     category: p.category,
     provider: p.provider,
     providerLocked: p.providerLocked,
+    code: p.code,
+    codeName: p.codeName,
     startMonth: p.startMonth,
     startDate: chon.startDate,
     timeText: chon.timeText,
@@ -758,6 +771,41 @@ export async function updateProvider(id: string, provider: string | null, actor:
   void mirrorPromotion(id, actor).catch((err) =>
     console.error('[Promotions] Lỗi mirror sau khi đổi sảnh:', err)
   );
+
+  return updated;
+}
+
+/**
+ * Sửa Code / Name Code — mở cho MỌI người dùng đã đăng nhập (yêu cầu của chủ dự án). Chỉ là
+ * thông tin tra cứu nội bộ, không nằm trong bài mirror nên không phải dựng lại / index lại.
+ * Chuỗi rỗng lưu thành null để khuyến mãi quay về mục "Chưa hoàn thiện".
+ */
+export async function updateCodes(
+  id: string,
+  input: { code: string | null; codeName: string | null },
+  actor: AuthUser
+): Promise<Promotion> {
+  const { promotions } = kbTables();
+  const [p] = await db.select().from(promotions).where(eq(promotions.id, id)).limit(1);
+  if (!p) throw notFound('Promotion not found');
+
+  const code = input.code?.trim() || null;
+  const codeName = input.codeName?.trim() || null;
+  const [updated] = await db
+    .update(promotions)
+    .set({ code, codeName, updatedAt: new Date() })
+    .where(eq(promotions.id, id))
+    .returning();
+
+  await db.insert(auditLogs).values({
+    action: 'promotion_codes_edit',
+    actorId: actor.id,
+    actorEmail: actor.email,
+    targetId: id,
+    targetType: 'promotion',
+    kbCode: currentKb().code,
+    meta: { title: p.title, from: { code: p.code, codeName: p.codeName }, to: { code, codeName } },
+  });
 
   return updated;
 }

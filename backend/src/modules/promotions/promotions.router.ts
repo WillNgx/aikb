@@ -1,7 +1,16 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { authenticate } from '../../middleware/auth';
+import { validateBody } from '../../middleware/validate';
 import { providerOptions } from './promotionContent.util';
-import { getPromotionDetail, listByMonth, listMonths, listTagged } from './promotions.service';
+import {
+  getPromotionDetail,
+  listByMonth,
+  listIncomplete,
+  listMonths,
+  listTagged,
+  updateCodes,
+} from './promotions.service';
 
 const router = Router();
 
@@ -43,6 +52,33 @@ router.get('/', async (req, res, next) => {
 router.get('/new', async (_req, res, next) => {
   try {
     res.json({ items: await listTagged() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Khuyến mãi còn thiếu Code hoặc Name Code — mục 'Chưa hoàn thiện'. */
+router.get('/incomplete', async (_req, res, next) => {
+  try {
+    res.json({ items: await listIncomplete() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const codesSchema = z.object({
+  code: z.string().max(200).nullable(),
+  codeName: z.string().max(300).nullable(),
+});
+
+/**
+ * Sửa Code / Name Code. CỐ Ý không có `requireAdmin`: chủ dự án mở thao tác này cho mọi người
+ * dùng đã đăng nhập (vẫn ghi audit_logs).
+ */
+router.patch('/:id/codes', validateBody(codesSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof codesSchema>;
+    res.json(await updateCodes(String(req.params.id), body, req.user!));
   } catch (err) {
     next(err);
   }

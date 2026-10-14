@@ -56,6 +56,8 @@ export const auditActionEnum = pgEnum('audit_action', [
   'telegram_delete',
   'promotion_import',
   'promotion_provider_edit',
+  // Sửa Code / Name Code của khuyến mãi — mở cho MỌI người dùng đã đăng nhập
+  'promotion_codes_edit',
   'kb_create',
   // Lưu ở trang System prompt: prompt, câu chào khung chat, các câu AI trả lời sẵn của một KB
   'system_prompt_edit',

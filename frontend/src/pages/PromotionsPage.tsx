@@ -29,6 +29,8 @@ import { useAlert } from '../components/ConfirmModal';
  * danh mục thật (danh mục lấy nguyên văn từ dữ liệu nguồn: Nổi bật, Hoàn trả...).
  */
 const DANH_MUC_MOI = '__new__';
+/** Mục "Chưa hoàn thiện": khuyến mãi thiếu Code hoặc Name Code (lấy thẳng từ DB, không theo tháng). */
+const DANH_MUC_CHUA_XONG = '__incomplete__';
 
 // ─── Tiện ích ─────────────────────────────────────────────────────────────────
 
@@ -219,17 +221,41 @@ function ProviderBadge({
   );
 }
 
+// ─── Code / Name Code (2 dòng ngay dưới tên khuyến mãi) ──────────────────────
+
+function CodeLines({ km }: { km: Pick<PromotionListItem, 'code' | 'codeName'> }) {
+  const { t } = useTranslation();
+  const dong = (nhan: string, giaTri: string | null) => (
+    <div className="promo-code-row">
+      <span className="promo-code-label">{nhan}</span>
+      {giaTri ? (
+        <span className="promo-code-value">{giaTri}</span>
+      ) : (
+        <span className="promo-badge-missing">{t('promo.missing')}</span>
+      )}
+    </div>
+  );
+  return (
+    <div className="promo-codes">
+      {dong(t('promo.codeLabel'), km.code)}
+      {dong(t('promo.codeNameLabel'), km.codeName)}
+    </div>
+  );
+}
+
 // ─── Thẻ khuyến mãi ───────────────────────────────────────────────────────────
 
 function PromotionCard({
   km,
   isAdmin,
   onOpen,
+  onEdit,
   onChanged,
 }: {
   km: PromotionListItem;
   isAdmin: boolean;
   onOpen: (versionId?: string) => void;
+  onEdit: () => void;
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
@@ -251,7 +277,7 @@ function PromotionCard({
       </div>
 
       <h3>{km.title}</h3>
-      <p className="promo-excerpt">{km.summary}</p>
+      <CodeLines km={km} />
 
       <div className="promo-meta">
         <div>
@@ -286,6 +312,9 @@ function PromotionCard({
         <button type="button" className="btn-secondary-custom btn-sm" onClick={() => onOpen()}>
           {t('promo.viewDetail')}
         </button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onEdit} title={t('promo.editCodesTitle')}>
+          <i className="fa fa-pencil" aria-hidden="true" /> {t('promo.edit')}
+        </button>
       </div>
     </article>
   );
@@ -319,6 +348,7 @@ function DetailModal({
         <div className="promo-modal-head">
           <div style={{ minWidth: 0 }}>
             <h2>{data?.title ?? t('common.loading')}</h2>
+            {data && <CodeLines km={data} />}
             <div className="d-flex align-items-center gap-2 flex-wrap">
               {data && <span className="promo-tag">{data.category}</span>}
               {data && <span className="promo-provider">{data.provider ?? t('promo.unknownProvider')}</span>}
@@ -405,6 +435,95 @@ function DetailModal({
             {t('common.close')}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Hộp sửa Code / Name Code (mọi người dùng) ────────────────────────────────
+
+function CodesModal({
+  km,
+  onClose,
+  onSaved,
+}: {
+  km: PromotionListItem;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t } = useTranslation();
+  const [code, setCode] = useState(km.code ?? '');
+  const [codeName, setCodeName] = useState(km.codeName ?? '');
+  const [loi, setLoi] = useState('');
+
+  const luu = useMutation({
+    mutationFn: () => promotionsApi.setCodes(km.id, code.trim() || null, codeName.trim() || null),
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
+    onError: (e: { response?: { data?: { error?: string } } }) =>
+      setLoi(e.response?.data?.error ?? t('promo.saveCodesFailed')),
+  });
+
+  return (
+    <div className="promo-modal-backdrop" onClick={onClose} role="presentation">
+      <div className="promo-modal promo-modal-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="promo-modal-head">
+          <div style={{ minWidth: 0 }}>
+            <h2>{t('promo.editCodesHeading')}</h2>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-muted)' }}>{km.title}</div>
+          </div>
+          <button type="button" className="promo-close" onClick={onClose} title={t('common.close')}>
+            ✕
+          </button>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            luu.mutate();
+          }}
+        >
+          <div className="promo-modal-body">
+            {loi && (
+              <div className="alert-box alert-danger" role="alert">
+                {loi}
+              </div>
+            )}
+            <div className="promo-field">
+              <label htmlFor="promo-code">{t('promo.codeLabel')}</label>
+              <input
+                id="promo-code"
+                className="input-custom"
+                value={code}
+                maxLength={200}
+                autoFocus
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </div>
+            <div className="promo-field">
+              <label htmlFor="promo-code-name">{t('promo.codeNameLabel')}</label>
+              <input
+                id="promo-code-name"
+                className="input-custom"
+                value={codeName}
+                maxLength={300}
+                onChange={(e) => setCodeName(e.target.value)}
+              />
+              <div className="promo-help">{t('promo.codesHelp')}</div>
+            </div>
+          </div>
+
+          <div className="promo-modal-foot">
+            <button type="button" className="btn-cancel" onClick={onClose}>
+              {t('common.cancel')}
+            </button>
+            <button type="submit" className="btn-primary-custom" disabled={luu.isPending}>
+              {luu.isPending ? t('promo.saving') : t('common.save')}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -663,6 +782,7 @@ export default function PromotionsPage() {
   const [namMo, setNamMo] = useState<Record<string, boolean>>({});
   const [chiTiet, setChiTiet] = useState<{ id: string; versionId?: string } | null>(null);
   const [moNhap, setMoNhap] = useState(false);
+  const [dangSuaCode, setDangSuaCode] = useState<PromotionListItem | null>(null);
 
   const { data: months, isLoading: dangTaiThang } = useQuery({
     queryKey: ['promo-months'],
@@ -674,6 +794,13 @@ export default function PromotionsPage() {
   const { data: dsMoi = [] } = useQuery({
     queryKey: ['promo-new'],
     queryFn: promotionsApi.tagged,
+    staleTime: 60_000,
+  });
+
+  // Mục "Chưa hoàn thiện" — lọc thẳng trong DB nên gồm cả khuyến mãi ở tháng chưa tải.
+  const { data: dsChuaXong = [] } = useQuery({
+    queryKey: ['promo-incomplete'],
+    queryFn: promotionsApi.incomplete,
     staleTime: 60_000,
   });
 
@@ -711,11 +838,14 @@ export default function PromotionsPage() {
   const loc = (ds: PromotionListItem[]): PromotionListItem[] => {
     const tk = boDau(tuKhoa.trim());
     return ds.filter((k) => {
-      if (danhMucDangChon !== 'tat-ca' && danhMucDangChon !== DANH_MUC_MOI && k.category !== danhMucDangChon) {
+      const dacBiet = danhMucDangChon === DANH_MUC_MOI || danhMucDangChon === DANH_MUC_CHUA_XONG;
+      if (danhMucDangChon !== 'tat-ca' && !dacBiet && k.category !== danhMucDangChon) {
         return false;
       }
       if (!tk) return true;
-      return boDau(`${k.title} ${k.summary ?? ''} ${k.provider ?? ''}`).includes(tk);
+      return boDau(
+        `${k.title} ${k.summary ?? ''} ${k.provider ?? ''} ${k.code ?? ''} ${k.codeName ?? ''}`
+      ).includes(tk);
     });
   };
 
@@ -728,7 +858,17 @@ export default function PromotionsPage() {
     queryClient.invalidateQueries({ queryKey: ['promo-month'] });
     queryClient.invalidateQueries({ queryKey: ['promo-new'] });
     queryClient.invalidateQueries({ queryKey: ['promo-months'] });
+    queryClient.invalidateQueries({ queryKey: ['promo-incomplete'] });
+    queryClient.invalidateQueries({ queryKey: ['promo-detail'] });
   };
+
+  // Mục đặc biệt ("New" / "Chưa hoàn thiện"): danh sách lấy thẳng từ DB, hiện thành 1 nhóm.
+  const nhomDacBiet =
+    danhMucDangChon === DANH_MUC_MOI
+      ? { tieuDe: t('promo.categoryNew'), goiY: t('promo.newGroupHint'), ds: dsMoi }
+      : danhMucDangChon === DANH_MUC_CHUA_XONG
+        ? { tieuDe: t('promo.categoryIncomplete'), goiY: t('promo.incompleteGroupHint'), ds: dsChuaXong }
+        : null;
 
   // Nhóm sẽ vẽ ở khu nội dung
   const nhomHienThi =
@@ -867,6 +1007,16 @@ export default function PromotionsPage() {
                 <span className="promo-count">{dsMoi.length}</span>
               </button>
             )}
+            <button
+              type="button"
+              className={`promo-row${danhMucDangChon === DANH_MUC_CHUA_XONG ? ' active' : ''}`}
+              onClick={() => setDanhMucDangChon(DANH_MUC_CHUA_XONG)}
+            >
+              <span className="promo-label">{t('promo.categoryIncomplete')}</span>
+              <span className={`promo-count${dsChuaXong.length ? ' promo-count-danger' : ''}`}>
+                {dsChuaXong.length}
+              </span>
+            </button>
             {danhMucCo.map((dm) => (
               <button
                 key={dm}
@@ -884,27 +1034,27 @@ export default function PromotionsPage() {
         <main className="promo-main">
           {dangTaiThang && <div className="spinner-custom mx-auto" />}
 
-          {/* Mục "New": danh sách lấy thẳng theo tag nên không theo tháng, hiện thành 1 nhóm. */}
-          {danhMucDangChon === DANH_MUC_MOI ? (
+          {nhomDacBiet ? (
             <section className="promo-month">
               <div className="promo-month-head">
-                <h2>{t('promo.categoryNew')}</h2>
-                <span className="promo-count">{loc(dsMoi).length}</span>
-                <span className="promo-soft-badge">{t('promo.newGroupHint')}</span>
+                <h2>{nhomDacBiet.tieuDe}</h2>
+                <span className="promo-count">{loc(nhomDacBiet.ds).length}</span>
+                <span className="promo-soft-badge">{nhomDacBiet.goiY}</span>
               </div>
-              {loc(dsMoi).length === 0 ? (
+              {loc(nhomDacBiet.ds).length === 0 ? (
                 <div className="promo-empty">
                   <strong>{t('promo.emptyTitle')}</strong>
                   <div>{t('promo.emptyDesc')}</div>
                 </div>
               ) : (
                 <div className="promo-grid">
-                  {loc(dsMoi).map((km) => (
+                  {loc(nhomDacBiet.ds).map((km) => (
                     <PromotionCard
                       key={km.id}
                       km={km}
                       isAdmin={isAdmin}
                       onOpen={(versionId) => setChiTiet({ id: km.id, versionId })}
+                      onEdit={() => setDangSuaCode(km)}
                       onChanged={lamMoiDanhSach}
                     />
                   ))}
@@ -966,6 +1116,7 @@ export default function PromotionsPage() {
                         km={km}
                         isAdmin={isAdmin}
                         onOpen={(versionId) => setChiTiet({ id: km.id, versionId })}
+                        onEdit={() => setDangSuaCode(km)}
                         onChanged={lamMoiDanhSach}
                       />
                     ))}
@@ -980,6 +1131,9 @@ export default function PromotionsPage() {
 
       {chiTiet && (
         <DetailModal id={chiTiet.id} initialVersionId={chiTiet.versionId} onClose={() => setChiTiet(null)} />
+      )}
+      {dangSuaCode && (
+        <CodesModal km={dangSuaCode} onClose={() => setDangSuaCode(null)} onSaved={lamMoiDanhSach} />
       )}
       {moNhap && <ImportModal onClose={() => setMoNhap(false)} onDone={lamMoiDanhSach} />}
     </div>
