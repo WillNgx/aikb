@@ -49,6 +49,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+  // 'true' thì BE phục vụ luôn bản build FE (xem serveFrontend.ts) — dùng khi không đi qua Vercel được.
+  SERVE_FRONTEND: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   // Địa chỉ công khai của service, do Render TỰ cấp khi chạy trên Render (không cần khai trong
   // .env). Có biến này thì job self-ping bật (xem jobs/selfPing.ts); máy dev không có nên tự bỏ qua.
   RENDER_EXTERNAL_URL: z.string().url().optional(),

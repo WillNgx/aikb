@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { generalLimiter } from './middleware/rateLimiter';
 import { resolveKb } from './middleware/resolveKb';
 import { errorHandler } from './middleware/errorHandler';
+import { serveFrontend, frontendHelmetOptions } from './serveFrontend';
 
 // Routers
 import authRouter from './modules/auth/auth.router';
@@ -41,7 +42,7 @@ const app = express();
 app.set('trust proxy', 3);
 
 // ─── Security Headers ────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet(env.SERVE_FRONTEND ? frontendHelmetOptions() : undefined));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(
@@ -67,6 +68,10 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// ─── Giao diện FE (tuỳ chọn, SERVE_FRONTEND=true) ─────────────────────────────
+// Sau /health, trước rate limiter + resolveKb. Mặc định tắt: FE chạy riêng ở Vercel như cũ.
+if (env.SERVE_FRONTEND) serveFrontend(app);
 
 // ─── Rate Limiting (global) ───────────────────────────────────────────────────
 app.use(generalLimiter);

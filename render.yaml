@@ -46,3 +46,47 @@ services:
         sync: false
       - key: TELEGRAM_ADMIN_CONTACT
         sync: false
+
+  # Bản "BE phục vụ luôn FE": một địa chỉ duy nhất (https://aikb-web.onrender.com) cho cả giao diện
+  # lẫn API, dùng khi mạng công ty chặn Vercel. Service aikb-api + FE Vercel ở trên giữ nguyên.
+  # Build cả FE (VITE_API_URL=/api → gọi API cùng origin) rồi build BE; không có rootDir vì cần thấy cả hai thư mục.
+  - type: web
+    name: aikb-web
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --include=dev --prefix frontend && npm run build --prefix frontend && npm ci --include=dev --prefix backend && npm run build --prefix backend
+    startCommand: npm start --prefix backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: SERVE_FRONTEND
+        value: "true"
+      # Biến VITE_* được "đóng" vào bản build FE lúc build, không đọc lúc chạy
+      - key: VITE_API_URL
+        value: /api
+      - key: VITE_SUPABASE_URL
+        value: https://wrxsxtdeyzvsbhncevmm.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_URL
+        value: https://wrxsxtdeyzvsbhncevmm.supabase.co
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: CUSTOM_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # CỐ Ý KHÔNG khai TELEGRAM_BOT_TOKEN: bot chỉ được chạy ở đúng MỘT nơi (aikb-api).
