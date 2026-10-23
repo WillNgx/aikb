@@ -19,6 +19,7 @@ import Callout from '../extensions/Callout';
 import HeadingAnchor from '../extensions/HeadingAnchor';
 import TableHeaderColor from '../extensions/TableHeaderColor';
 import { uploadImageFile, uploadImageFromUrl } from '../utils/uploadImageFile';
+import { hasDataUriImages, replaceDataUriImages } from '../utils/pasteDataUriImages';
 import { createEmptyDoc } from '../data/docModel';
 import type { TiptapDoc } from '../data/docModel';
 
@@ -95,6 +96,19 @@ export default function TiptapEditor({
             .catch((err: Error) => thongBao(err.message));
         };
 
+        const html = clipboardData.getData('text/html');
+
+        // Dán từ Word: ảnh nằm trong HTML dạng data: URI mà Image của Tiptap sẽ bỏ qua → upload
+        // từng ảnh, thay src rồi dán lại cả đoạn qua luồng parse mặc định (giữ nguyên bảng,
+        // định dạng). Phải xử lý trước nhánh "file ảnh" bên dưới để không mất chữ đi kèm.
+        if (html && hasDataUriImages(html)) {
+          replaceDataUriImages(html, uploadImageFile).then(({ html: fixedHtml, failed }) => {
+            if (!view.isDestroyed) view.pasteHTML(fixedHtml);
+            if (failed > 0) thongBao(t('editor.pastedImagesFailed', { n: failed }));
+          });
+          return true;
+        }
+
         const imageFile = Array.from(clipboardData.files).find((f) => f.type.startsWith('image/'));
         if (imageFile) {
           insertUploadedImage(uploadImageFile(imageFile));
@@ -105,7 +119,6 @@ export default function TiptapEditor({
         // <img src="https://nguồn-gốc/...">. Chỉ can thiệp khi nội dung dán vào CHỈ có đúng 1
         // ảnh (không có chữ/bảng khác đi kèm) — tránh chặn nhầm paste nội dung hỗn hợp (đoạn
         // văn, bảng Excel...) đã được ProseMirror tự parse đúng theo luồng mặc định.
-        const html = clipboardData.getData('text/html');
         if (html) {
           const doc = new DOMParser().parseFromString(html, 'text/html');
           const imgs = doc.body.querySelectorAll('img');

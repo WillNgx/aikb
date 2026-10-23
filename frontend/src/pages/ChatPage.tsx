@@ -4,15 +4,17 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useKbChatText } from '../api/kb';
 import { aiApi } from '../api';
-import type { ChatProgress as ChatProgressData } from '../api';
+import type { AiAnswerImage, ChatProgress as ChatProgressData } from '../api';
 import { useNavigate } from 'react-router-dom';
 import ChatMarkdown from '../components/ChatMarkdown';
+import ChatImages from '../components/ChatImages';
 import ChatProgress from '../components/ChatProgress';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   citations?: Citation[];
+  images?: AiAnswerImage[];
   hasAnswer?: boolean;
   suggestions?: Suggestion[];
   note?: string;
@@ -65,6 +67,7 @@ export default function ChatPage() {
           role: 'assistant',
           content: data.answer,
           citations: data.citations,
+          images: data.images,
           hasAnswer: data.hasAnswer,
           suggestions: data.suggestions,
           note: data.note,
@@ -132,6 +135,8 @@ export default function ChatPage() {
                     {msg.note}
                   </div>
                 )}
+
+                {msg.images && msg.images.length > 0 && <ChatImages images={msg.images} />}
 
                 {/* Citations */}
                 {msg.citations && msg.citations.length > 0 && (

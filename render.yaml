@@ -35,8 +35,6 @@ services:
       # Tuỳ chọn — để trống nếu không dùng
       - key: GEMINI_API_KEY_2
         sync: false
-      - key: CUSTOM_API_KEY
-        sync: false
       # Anthropic Claude — chỉ dùng khi Admin chọn Claude ở trang Cấu hình AI
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -84,8 +82,6 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_API_KEY_2
-        sync: false
-      - key: CUSTOM_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false

@@ -176,7 +176,24 @@ export async function createKb(
       }
     }
 
-    // 4) Đăng ký KB. Xếp cuối danh sách để thứ tự các KB cũ trên giao diện không đổi.
+    // 4) Khoá bảng mới trước REST API của Supabase (cùng chuẩn migration 0017). `LIKE` không chép
+    //    trạng thái RLS nên KB tạo từ giao diện sẽ để trần nếu thiếu bước này. Backend nối bằng role
+    //    `postgres` (BYPASSRLS) nên không ảnh hưởng đường chạy. Role anon/authenticated chỉ có trên
+    //    Supabase — DB Docker local không có thì bỏ qua REVOKE, vẫn bật RLS.
+    for (const t of KB_TABLES) {
+      await tx.execute(sql.raw(`ALTER TABLE ${qualified(code, t)} ENABLE ROW LEVEL SECURITY`));
+    }
+    const roles = (
+      await tx.execute(sql`SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')`)
+    ).rows as { rolname: string }[];
+    if (roles.length > 0) {
+      const dsRole = roles.map((r) => `"${r.rolname}"`).join(', ');
+      for (const t of KB_TABLES) {
+        await tx.execute(sql.raw(`REVOKE ALL ON TABLE ${qualified(code, t)} FROM ${dsRole}`));
+      }
+    }
+
+    // 5) Đăng ký KB. Xếp cuối danh sách để thứ tự các KB cũ trên giao diện không đổi.
     const [maxOrder] = (
       await tx.execute(sql`SELECT COALESCE(MAX(sort_order), 0) + 1 AS tiep FROM public.knowledge_bases`)
     ).rows as { tiep: number }[];
@@ -186,7 +203,7 @@ export async function createKb(
           VALUES (${code}, ${name}, ${NEW_KB_LOCALE}, ${code}, true, ${maxOrder.tiep})`
     );
 
-    // 5) System prompt riêng của KB. Tên bảng phải ghép chuỗi (không tham số hoá được) nhưng GIÁ
+    // 6) System prompt riêng của KB. Tên bảng phải ghép chuỗi (không tham số hoá được) nhưng GIÁ
     //    TRỊ thì luôn truyền dạng tham số — đây là nội dung do người dùng gõ tự do.
     const prompt = input.systemPrompt?.trim();
     if (prompt) {

@@ -3,9 +3,10 @@ import type { FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { aiApi } from "../api";
-import type { ChatProgress as ChatProgressData } from "../api";
+import type { AiAnswerImage, ChatProgress as ChatProgressData } from "../api";
 import { useNavigate } from "react-router-dom";
 import ChatMarkdown from "./ChatMarkdown";
+import ChatImages from "./ChatImages";
 import ChatProgress from "./ChatProgress";
 import { useKbChatText } from "../api/kb";
 
@@ -19,6 +20,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  images?: AiAnswerImage[];
   hasAnswer?: boolean;
   suggestions?: Suggestion[];
   needsClarification?: boolean;
@@ -91,6 +93,7 @@ export default function AIChatWidget() {
           role: "assistant",
           content: data.answer,
           citations: data.citations,
+          images: data.images,
           hasAnswer: data.hasAnswer,
           suggestions: data.suggestions,
           needsClarification: data.needsClarification,
@@ -258,6 +261,8 @@ export default function AIChatWidget() {
                           {msg.note}
                         </div>
                       )}
+
+                      {msg.images && msg.images.length > 0 && <ChatImages images={msg.images} />}
 
                       {/* Citations */}
                       {msg.citations && msg.citations.length > 0 && (

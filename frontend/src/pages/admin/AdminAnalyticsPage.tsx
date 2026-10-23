@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../api';
@@ -23,6 +23,13 @@ interface ReindexProgress {
   currentItem: string | null;
   startedAt: string | null;
   finishedAt: string | null;
+}
+
+type StaleReason = 'no_chunks' | 'metadata' | 'title' | 'outdated';
+
+interface StaleResponse {
+  total: number;
+  stale: { id: string; name: string; path: string; reasons: StaleReason[] }[];
 }
 
 interface PublishAllProgress {
@@ -68,6 +75,27 @@ export default function AdminAnalyticsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-reindex-status'] });
     },
   });
+
+  // Danh sách bài index đang lệch — đọc DB mỗi lần mở trang/sau mỗi lần re-index, không poll.
+  const [staleOpen, setStaleOpen] = useState(false);
+  const { data: staleData } = useQuery<StaleResponse>({
+    queryKey: ['admin-reindex-stale'],
+    queryFn: adminApi.getStaleArticles,
+  });
+
+  const reindexOneMutation = useMutation({
+    mutationFn: adminApi.reindexOne,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-reindex-stale'] }),
+  });
+
+  // Lượt "Re-index toàn bộ" / thử lại bài lỗi vừa xong → nạp lại danh sách bài lệch.
+  const prevReindexStatusRef = useRef<ReindexProgress['status'] | undefined>(undefined);
+  useEffect(() => {
+    if (prevReindexStatusRef.current === 'running' && reindexProgress?.status === 'done') {
+      queryClient.invalidateQueries({ queryKey: ['admin-reindex-stale'] });
+    }
+    prevReindexStatusRef.current = reindexProgress?.status;
+  }, [reindexProgress?.status, queryClient]);
 
   const retryFailedMutation = useMutation({
     mutationFn: adminApi.retryFailedReindex,
@@ -189,7 +217,12 @@ export default function AdminAnalyticsPage() {
               <button
                 id="btn-reindex-all"
                 className="btn-primary-custom"
-                onClick={() => reindexMutation.mutate()}
+                onClick={async () => {
+                  const ok = await confirm(
+                    t('adminAnalytics.confirmReindexAll', { n: staleData?.total ?? '?' }),
+                  );
+                  if (ok) reindexMutation.mutate();
+                }}
                 disabled={reindexMutation.isPending || reindexProgress?.status === 'running'}
                 style={{ padding: '0.5rem 1.25rem' }}
               >
@@ -213,7 +246,12 @@ export default function AdminAnalyticsPage() {
               <button
                 id="btn-publish-all"
                 className="btn-primary-custom"
-                onClick={() => publishAllMutation.mutate()}
+                onClick={async () => {
+                  const ok = await confirm(
+                    t('adminAnalytics.confirmPublishAll', { n: publishAllProgress?.draftCount ?? 0 }),
+                  );
+                  if (ok) publishAllMutation.mutate();
+                }}
                 disabled={
                   publishAllMutation.isPending ||
                   publishAllProgress?.status === 'running' ||
@@ -246,6 +284,69 @@ export default function AdminAnalyticsPage() {
               <span style={{ marginLeft: '0.75rem', fontSize: '0.875rem', color: 'var(--color-danger, #ef4444)' }}>
                 ❌ {t('adminAnalytics.publishAllStartFailed')}
               </span>
+            )}
+
+            {/* Bài cần re-index: toggle số lượng, mở ra danh sách + nút re-index từng bài */}
+            {staleData && (
+              <div style={{ marginTop: '1rem' }}>
+                <button
+                  id="btn-stale-toggle"
+                  className="btn-ghost"
+                  aria-expanded={staleOpen}
+                  aria-controls="stale-articles-list"
+                  onClick={() => setStaleOpen((v) => !v)}
+                >
+                  {staleOpen ? '▾' : '▸'}{' '}
+                  {t('adminAnalytics.staleToggle', { stale: staleData.stale.length, total: staleData.total })}
+                </button>
+
+                {staleOpen && (
+                  <div id="stale-articles-list" style={{ marginTop: '0.75rem' }}>
+                    {staleData.stale.length === 0 ? (
+                      <p className="card-section-desc">{t('adminAnalytics.staleNone')}</p>
+                    ) : (
+                      <>
+                        <p className="card-section-desc">{t('adminAnalytics.staleDesc')}</p>
+                        {reindexOneMutation.isError && (
+                          <div className="alert-box alert-danger" role="alert" style={{ marginBottom: '0.75rem' }}>
+                            ⚠️ {t('adminAnalytics.staleFailed')}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {staleData.stale.map((a) => {
+                            const isThisRunning = reindexOneMutation.isPending && reindexOneMutation.variables === a.id;
+                            return (
+                              <div
+                                key={a.id}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'var(--color-surface-2)', borderRadius: 8 }}
+                              >
+                                <button
+                                  className="btn-primary-custom btn-sm"
+                                  onClick={() => reindexOneMutation.mutate(a.id)}
+                                  disabled={reindexOneMutation.isPending || reindexProgress?.status === 'running'}
+                                  style={{ flexShrink: 0 }}
+                                >
+                                  {isThisRunning
+                                    ? `⏳ ${t('adminAnalytics.staleReindexing')}`
+                                    : `🔄 ${t('adminAnalytics.staleReindex')}`}
+                                </button>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text)', overflowWrap: 'anywhere' }}>
+                                    {a.name || '—'}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted-strong)', overflowWrap: 'anywhere' }}>
+                                    {a.path || '/'} · {a.reasons.map((r) => t(`adminAnalytics.staleReason.${r}`)).join(', ')}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             {publishAllProgress?.status === 'done' && (
               <div style={{ marginTop: '0.75rem', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>

@@ -3,6 +3,7 @@ import { analyticsEvents } from '../../db/schema';
 import { sql } from 'drizzle-orm';
 import { embedText, isQuotaError } from '../embedding/embedding.service';
 import { currentKb, kbTables } from '../kb/kb.context';
+import type { ChunkImage } from '../../db/kbSchema';
 import { KB_SETTING_KEYS, getKbNumberSetting } from '../kb/kbSettings.service';
 
 
@@ -40,6 +41,8 @@ export interface SearchResult {
   searchType: 'keyword' | 'vector' | 'both';
   category: string | null;
   provider: string | null;
+  /** Ảnh trong chunk (null = không có, hoặc chunk lập trước khi có cột `images`). */
+  images: ChunkImage[] | null;
 }
 
 export interface SearchFilters {
@@ -177,6 +180,7 @@ async function keywordSearch(query: string, filters?: SearchFilters): Promise<Se
     rank: number;
     category: string | null;
     provider: string | null;
+    images: ChunkImage[] | null;
   }>(sql`
     SELECT
       cc.id AS chunk_id,
@@ -187,6 +191,7 @@ async function keywordSearch(query: string, filters?: SearchFilters): Promise<Se
       cc.chunk_text,
       cc.category,
       cc.provider,
+      cc.images,
       CASE
         WHEN n.name ILIKE ${ilikePattern} THEN 1.0
         ELSE ts_rank(to_tsvector('simple', cc.chunk_text), plainto_tsquery('simple', ${query}))
@@ -223,6 +228,7 @@ async function keywordSearch(query: string, filters?: SearchFilters): Promise<Se
     searchType: 'keyword' as const,
     category: r.category,
     provider: r.provider,
+    images: r.images,
   }));
 }
 
@@ -261,6 +267,7 @@ async function vectorSearch(query: string, filters?: SearchFilters): Promise<Sea
     similarity: number;
     category: string | null;
     provider: string | null;
+    images: ChunkImage[] | null;
   }>(sql`
     SELECT
       cc.id AS chunk_id,
@@ -271,6 +278,7 @@ async function vectorSearch(query: string, filters?: SearchFilters): Promise<Sea
       cc.chunk_text,
       cc.category,
       cc.provider,
+      cc.images,
       1 - (cc.embedding <=> ${embeddingStr}::vector) AS similarity
     FROM ${contentChunks} cc
     JOIN ${nodes} n ON n.id = cc.node_id
@@ -300,6 +308,7 @@ async function vectorSearch(query: string, filters?: SearchFilters): Promise<Sea
     searchType: 'vector' as const,
     category: r.category,
     provider: r.provider,
+    images: r.images,
   }));
 }
 

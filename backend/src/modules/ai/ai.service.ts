@@ -16,9 +16,14 @@ const MAX_CONTEXT_CHUNKS = 5;
 // Số link trích dẫn hiển thị cho user (Admin cấu hình tại Thống kê > Số lượng link gợi ý AI Chat).
 const DEFAULT_RELATED_LINKS_COUNT = 2;
 
+// Trần số ảnh kèm câu trả lời — nhiều hơn là làm khung chat 420px thành album.
+const MAX_ANSWER_IMAGES = 4;
+
 export interface ChatResponse {
   answer: string;
   citations: Citation[];
+  /** Ảnh minh hoạ của các chunk được trích dẫn (không do model sinh ra). */
+  images?: AnswerImage[];
   hasAnswer: boolean;
   suggestions?: SearchResult[];
   // Clarification flow (Rủi ro 1)
@@ -43,6 +48,13 @@ export interface ClarificationOption {
   label: string; // VD: "⚽ M Thể thao"
   provider: string; // VD: "M Thể thao"
   query: string; // Câu hỏi đầy đủ khi user chọn option này
+}
+
+export interface AnswerImage {
+  src: string;
+  alt?: string;
+  contentId: string;
+  contentTitle: string;
 }
 
 export interface Citation {
@@ -278,9 +290,21 @@ export async function chat(
   // Chỉ hiển thị cho user tối đa `relatedLinksCount` link đầu (Admin cấu hình) — KHÔNG cắt bớt
   // contextChunks dùng để trả lời (giữ nguyên MAX_CONTEXT_CHUNKS để câu trả lời đầy đủ).
   const relatedLinksCount = await getRelatedLinksCount();
+  const citedChunks = contextChunks.slice(0, relatedLinksCount);
+  // Ảnh CHỈ lấy từ chunk khớp nhất. Đã thử lấy từ mọi chunk được trích dẫn: chunk thứ hai thường là
+  // section anh em cùng bài (vd hỏi về phí vẫn kèm ảnh QR của mục nạp tiền) — ảnh sai gây khó chịu
+  // hơn ảnh thiếu. tinh-gon: nâng lên nhiều chunk khi model báo được nguồn nó thực sự dùng.
+  const images: AnswerImage[] = [];
+  for (const c of citedChunks.slice(0, 1)) {
+    for (const img of c.images ?? []) {
+      if (images.length < MAX_ANSWER_IMAGES && !images.some((i) => i.src === img.src)) {
+        images.push({ ...img, contentId: c.contentId, contentTitle: c.contentTitle });
+      }
+    }
+  }
   return {
     answer: rawAnswer,
-    citations: contextChunks.slice(0, relatedLinksCount).map((c) => ({
+    citations: citedChunks.map((c) => ({
       chunkId: c.chunkId,
       contentId: c.contentId,
       contentTitle: c.contentTitle,
@@ -288,6 +312,7 @@ export async function chat(
       headingIndex: c.headingIndex,
       excerpt: c.excerpt,
     })),
+    images: images.length > 0 ? images : undefined,
     hasAnswer: true,
     note,
     debug:

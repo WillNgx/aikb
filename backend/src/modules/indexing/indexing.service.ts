@@ -1,8 +1,10 @@
 import { db } from '../../db';
 import { appSettings } from '../../db/schema';
 import { kbTables } from '../kb/kb.context';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { embedText, isQuotaError } from '../embedding/embedding.service';
+import { businessRuleViolation, conflict, notFound } from '../../lib/AppError';
+import type { ChunkImage } from '../../db/kbSchema';
 
 type IndexingAction = 'publish' | 'unpublish' | 'delete' | 'reindex';
 
@@ -238,6 +240,7 @@ async function indexNode(nodeId: string): Promise<void> {
       chunkText: c.text,
       chunkIndex: index,
       embedding: c.embedding,
+      images: c.images.length > 0 ? c.images : null,
       category,
       subCategory,
       provider,
@@ -254,15 +257,35 @@ async function indexNode(nodeId: string): Promise<void> {
  * - provider = tên folder tổ tiên GẦN NHẤT (gần node nhất) có isProvider=true — không giới hạn
  *   cấp độ sâu, không phụ thuộc category/subCategory ở trên.
  */
-async function getAncestorMetadata(
-  nodeId: string
-): Promise<{ category: string | null; subCategory: string | null; provider: string | null }> {
+async function getAncestorMetadata(nodeId: string): Promise<AncestorMetadata> {
   const { nodes } = kbTables();
   const allNodes = await db
     .select({ id: nodes.id, parentId: nodes.parentId, name: nodes.name, isProvider: nodes.isProvider })
     .from(nodes);
-  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  return deriveAncestorMetadata(new Map(allNodes.map((n) => [n.id, n])), nodeId).metadata;
+}
 
+interface AncestorMetadata {
+  category: string | null;
+  subCategory: string | null;
+  provider: string | null;
+}
+
+interface AncestorRow {
+  parentId: string | null;
+  name: string;
+  isProvider: boolean;
+}
+
+/**
+ * Phần thuần của getAncestorMetadata — tách ra để getStaleArticles() tính "metadata đáng ra phải
+ * có" cho mọi bài từ MỘT lần đọc cây, và để hai nơi luôn dùng chung đúng một luật suy metadata.
+ * `path` là chuỗi tên folder tổ tiên (root-first) để hiển thị.
+ */
+function deriveAncestorMetadata(
+  byId: Map<string, AncestorRow>,
+  nodeId: string
+): { metadata: AncestorMetadata; path: string[] } {
   const chain: { name: string; isProvider: boolean }[] = [];
   let current = byId.get(nodeId);
   while (current?.parentId) {
@@ -281,10 +304,138 @@ async function getAncestorMetadata(
   }
 
   return {
-    category: chain[0]?.name ?? null,
-    subCategory: chain[1]?.name ?? null,
-    provider,
+    metadata: { category: chain[0]?.name ?? null, subCategory: chain[1]?.name ?? null, provider },
+    path: chain.map((c) => c.name),
   };
+}
+
+// ─── Bài chưa được index đúng (Admin) ───────────────────────────────────────────
+// Không lưu thêm cột "đã index lúc nào/theo gì" — so thẳng chunk đang có với thứ đáng ra phải có.
+// Bắt được: chuyển bài sang folder khác, đổi tên folder, bật/tắt cờ Provider (metadata lệch), bài
+// Published nhưng chưa có chunk, và lần Đăng lại bị lỗi index (chunk cũ hơn bản Đăng).
+// KHÔNG bắt được: nội dung chunk lệch nhưng không kèm dấu hiệu nào ở trên (vd đổi cách chunk) —
+// trường hợp đó vẫn dùng "Re-index toàn bộ".
+
+export type StaleReason = 'no_chunks' | 'metadata' | 'title' | 'outdated';
+
+export interface StaleArticle {
+  id: string;
+  name: string;
+  path: string;
+  reasons: StaleReason[];
+}
+
+// publishedAt lấy giờ máy chủ ứng dụng, created_at của chunk lấy giờ DB → chừa dung sai để lệch
+// đồng hồ không làm bài báo lệch oan. Một lần Đăng lại lỗi index để lại chunk cũ hàng giờ/ngày.
+const OUTDATED_TOLERANCE_MS = 5 * 60 * 1000;
+
+export async function getStaleArticles(): Promise<{ total: number; stale: StaleArticle[] }> {
+  const { nodes, contentChunks } = kbTables();
+
+  const allNodes = await db
+    .select({
+      id: nodes.id,
+      parentId: nodes.parentId,
+      name: nodes.name,
+      isProvider: nodes.isProvider,
+      type: nodes.type,
+      status: nodes.status,
+      publishedAt: nodes.publishedAt,
+    })
+    .from(nodes);
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const published = allNodes.filter((n) => n.type === 'article' && n.status === 'published');
+
+  const groups = await db.execute<{
+    node_id: string;
+    category: string | null;
+    sub_category: string | null;
+    provider: string | null;
+    title_ok: boolean;
+    last_at: Date | string;
+  }>(sql`
+    SELECT
+      cc.node_id,
+      cc.category,
+      cc.sub_category,
+      cc.provider,
+      bool_and(starts_with(cc.chunk_text, '[Tài liệu: ' || n.name || ']')) AS title_ok,
+      max(cc.created_at) AS last_at
+    FROM ${contentChunks} cc
+    JOIN ${nodes} n ON n.id = cc.node_id
+    GROUP BY cc.node_id, cc.category, cc.sub_category, cc.provider
+  `);
+  const groupsByNode = new Map<string, (typeof groups.rows)[number][]>();
+  for (const g of groups.rows ?? []) {
+    const list = groupsByNode.get(g.node_id);
+    if (list) list.push(g);
+    else groupsByNode.set(g.node_id, [g]);
+  }
+
+  const stale: StaleArticle[] = [];
+  for (const node of published) {
+    const { metadata, path } = deriveAncestorMetadata(byId, node.id);
+    const nodeGroups = groupsByNode.get(node.id) ?? [];
+    const reasons: StaleReason[] = [];
+
+    if (nodeGroups.length === 0) {
+      reasons.push('no_chunks');
+    } else {
+      if (
+        nodeGroups.some(
+          (g) =>
+            g.category !== metadata.category ||
+            g.sub_category !== metadata.subCategory ||
+            g.provider !== metadata.provider
+        )
+      ) {
+        reasons.push('metadata');
+      }
+      if (nodeGroups.some((g) => !g.title_ok)) reasons.push('title');
+      if (node.publishedAt) {
+        const lastIndexed = Math.max(...nodeGroups.map((g) => new Date(g.last_at).getTime()));
+        if (lastIndexed < node.publishedAt.getTime() - OUTDATED_TOLERANCE_MS) reasons.push('outdated');
+      }
+    }
+
+    if (reasons.length > 0) {
+      stale.push({ id: node.id, name: node.name, path: path.join(' / '), reasons });
+    }
+  }
+
+  stale.sort((a, b) => a.path.localeCompare(b.path) || a.name.localeCompare(b.name));
+  return { total: published.length, stale };
+}
+
+let singleReindexRunning = false;
+
+/**
+ * Re-index đúng MỘT bài (chạy đồng bộ, trả về khi xong). Từ chối khi "Re-index toàn bộ" đang
+ * chạy hoặc đang có một lượt re-index lẻ khác — mọi lượt embedding dùng chung quota Gemini nên
+ * phải xếp hàng tuần tự, không chạy chồng.
+ */
+export async function reindexOneArticle(id: string): Promise<void> {
+  const { nodes } = kbTables();
+  const [item] = await db
+    .select({ type: nodes.type, status: nodes.status })
+    .from(nodes)
+    .where(eq(nodes.id, id))
+    .limit(1);
+  if (!item) throw notFound('Node not found');
+  if (item.type !== 'article' || item.status !== 'published') {
+    throw businessRuleViolation('Only published articles can be re-indexed');
+  }
+
+  const busy = () => conflict('Another re-index run is in progress, please wait until it finishes');
+  // Đặt cờ TRƯỚC mọi await để hai request đồng thời không cùng lọt qua bước kiểm tra.
+  if (singleReindexRunning) throw busy();
+  singleReindexRunning = true;
+  try {
+    if ((await getReindexProgress()).status === 'running') throw busy();
+    await indexNode(id);
+  } finally {
+    singleReindexRunning = false;
+  }
 }
 
 /**
@@ -347,6 +498,7 @@ interface Chunk {
   sectionTitle: string | null;
   headingIndex: number | null;
   text: string;
+  images: ChunkImage[];
 }
 
 // ─── TipTap Doc Parser (bảng `nodes` — Wiki thật) ─────────────────────────────
@@ -355,7 +507,7 @@ interface Chunk {
 interface TiptapNodeLike {
   type: string;
   // colspan/rowspan: ô bảng đã gộp — xem flattenTable() để biết vì sao phải quan tâm
-  attrs?: { level?: number; alt?: string; variant?: string; colspan?: number; rowspan?: number };
+  attrs?: { level?: number; alt?: string; src?: string; variant?: string; colspan?: number; rowspan?: number };
   content?: TiptapNodeLike[];
   text?: string;
 }
@@ -382,6 +534,21 @@ function extractInlineText(node: TiptapNodeLike): string {
 }
 
 /**
+ * Gom ảnh trong một node top-level, kể cả ảnh lồng trong danh sách / callout / ô bảng. Chỉ nhận
+ * URL https — `src` đến từ nội dung Admin soạn nhưng sẽ được frontend đưa thẳng vào `<img>`.
+ */
+function collectImages(node: TiptapNodeLike, out: ChunkImage[]): void {
+  if (node.type === 'image') {
+    const src = node.attrs?.src;
+    if (typeof src === 'string' && src.startsWith('https://') && !out.some((i) => i.src === src)) {
+      out.push(node.attrs?.alt ? { src, alt: node.attrs.alt } : { src });
+    }
+    return;
+  }
+  node.content?.forEach((child) => collectImages(child, out));
+}
+
+/**
  * Chunk 1 tài liệu TipTap (doc phẳng, không lồng như BlockNode cũ) theo heading — mỗi heading
  * (H1/H2/H3, không phân biệt cấp) mở ra 1 section/chunk mới, gồm mọi nội dung sau nó cho tới
  * heading tiếp theo. horizontalRule = ranh giới chunk cưỡng bức trong cùng 1 section (giống
@@ -399,13 +566,17 @@ function parseDocToChunks(doc: TiptapDocLike | null, articleTitle: string): Chun
   let headingCounter = 0;
   let currentHeadingIndex: number | null = null;
   let parts: string[] = [];
+  let images: ChunkImage[] = [];
 
   function flushSection() {
     const text = parts.map((p) => p.trim()).filter(Boolean).join('\n');
+    const sectionImages = images;
     parts = [];
-    if (!text) return;
-    const fullText = `${titlePrefix} ${sectionTitle ? `[Phần: ${sectionTitle}] ` : ''}${text}`;
-    chunks.push({ sectionTitle, headingIndex: currentHeadingIndex, text: fullText });
+    images = [];
+    // Section chỉ có ảnh (không chữ) vẫn thành chunk: nếu bỏ, ảnh biến mất khỏi AI chat.
+    if (!text && sectionImages.length === 0) return;
+    const fullText = `${titlePrefix} ${sectionTitle ? `[Phần: ${sectionTitle}] ` : ''}${text}`.trimEnd();
+    chunks.push({ sectionTitle, headingIndex: currentHeadingIndex, text: fullText, images: sectionImages });
   }
 
   for (const node of topLevelNodes) {
@@ -422,11 +593,12 @@ function parseDocToChunks(doc: TiptapDocLike | null, articleTitle: string): Chun
     }
     const text = extractNodeText(node);
     if (text) parts.push(text);
+    collectImages(node, images);
   }
   flushSection();
 
   if (chunks.length === 0) {
-    chunks.push({ sectionTitle: articleTitle, headingIndex: null, text: `${titlePrefix} ${articleTitle}` });
+    chunks.push({ sectionTitle: articleTitle, headingIndex: null, text: `${titlePrefix} ${articleTitle}`, images: [] });
   }
 
   return chunks;

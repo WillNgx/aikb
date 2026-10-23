@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth';
 import { requireAdmin } from '../../middleware/requireAdmin';
-import { startReindexAll, retryFailedReindex, getReindexProgress } from './indexing.service';
+import {
+  startReindexAll,
+  retryFailedReindex,
+  getReindexProgress,
+  getStaleArticles,
+  reindexOneArticle,
+} from './indexing.service';
 
 const router = Router();
 
@@ -49,6 +55,32 @@ router.post('/retry-failed', authenticate, requireAdmin, async (req, res, next) 
     }
 
     res.json({ message: `Started retrying ${total} failed articles`, count: total });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/admin/reindex/stale
+ * Các bài Published có index lệch (chưa có chunk, metadata folder cũ, lần Đăng lại lỗi index...)
+ * kèm tổng số bài Published — xem getStaleArticles.
+ */
+router.get('/stale', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await getStaleArticles());
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/admin/reindex/node/:id
+ * Re-index đúng một bài, chạy đồng bộ (có thể lâu nếu dính rate limit Gemini).
+ */
+router.post('/node/:id', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    await reindexOneArticle(req.params.id as string);
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

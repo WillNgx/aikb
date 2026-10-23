@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import dns from 'node:dns/promises';
 import { createClient } from '@supabase/supabase-js';
-import { fromBuffer } from 'file-type';
 import { authenticate } from '../../middleware/auth';
 import { requireAdmin } from '../../middleware/requireAdmin';
 import { validateBody } from '../../middleware/validate';
 import { env } from '../../config/env';
 import { AppError } from '../../lib/AppError';
+import { downloadPublicImage } from './safeFetch';
 
 const router = Router();
 const supabaseAdmin = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -31,23 +30,37 @@ async function ensureBucket(): Promise<void> {
   bucketEnsured = true;
 }
 
+/** Nhận diện định dạng theo chữ ký đầu file (magic bytes); null nếu không phải 4 định dạng cho phép. */
+function sniffImageMime(b: Buffer): string | null {
+  if (b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return 'image/png';
+  }
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  const head6 = b.subarray(0, 6).toString('latin1');
+  if (head6 === 'GIF87a' || head6 === 'GIF89a') return 'image/gif';
+  if (b.length >= 12 && b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP') {
+    return 'image/webp';
+  }
+  return null;
+}
+
 /**
  * Kiểm tra magic bytes thật của buffer — không tin tưởng mimeType do client/nguồn ngoài tự
  * khai báo (có thể bị giả mạo). Dùng chung cho cả upload trực tiếp lẫn upload từ URL ngoài.
  */
-async function detectAllowedMime(buffer: Buffer): Promise<{ mime: string; ext: string }> {
+function detectAllowedMime(buffer: Buffer): { mime: string; ext: string } {
   if (buffer.byteLength > MAX_BYTES) {
     throw new AppError(413, 'Image exceeds the 5MB size limit');
   }
-  const detected = await fromBuffer(buffer);
-  const ext = detected && ALLOWED_MIME[detected.mime];
-  if (!detected || !ext) {
+  const mime = sniffImageMime(buffer);
+  const ext = mime && ALLOWED_MIME[mime];
+  if (!mime || !ext) {
     throw new AppError(
       400,
       'File content does not match an allowed image format (PNG, JPEG, WEBP, GIF)'
     );
   }
-  return { mime: detected.mime, ext };
+  return { mime, ext };
 }
 
 /** Lưu buffer ảnh đã validate vào Supabase Storage, trả về public URL. */
@@ -86,7 +99,7 @@ router.post('/image', authenticate, requireAdmin, validateBody(uploadSchema), as
     const [, , base64Data] = match;
     const buffer = Buffer.from(base64Data, 'base64');
 
-    const { mime, ext } = await detectAllowedMime(buffer);
+    const { mime, ext } = detectAllowedMime(buffer);
     const url = await storeImageBuffer(buffer, mime, ext, req.user!.id);
     res.status(201).json({ url });
   } catch (err) {
@@ -95,43 +108,6 @@ router.post('/image', authenticate, requireAdmin, validateBody(uploadSchema), as
     next(err);
   }
 });
-
-const PRIVATE_HOSTNAME_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^0\.0\.0\.0$/,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^169\.254\./, // link-local + cloud metadata endpoint
-  /^\[?::1\]?$/,
-  /^\[?fe80:/i,
-  /^\[?fc00:/i,
-  /^\[?fd00:/i,
-];
-
-function isPrivateAddress(host: string): boolean {
-  return PRIVATE_HOSTNAME_PATTERNS.some((p) => p.test(host));
-}
-
-/**
- * Chặn SSRF — chỉ cho phép http(s) tới host công khai, không cho trỏ vào mạng nội bộ.
- *
- * Kiểm tra cả hostname LẪN địa chỉ IP mà nó thực sự resolve ra. Chỉ so hostname (như trước) là
- * không đủ: một domain công khai bình thường vẫn có thể trỏ DNS sang 127.0.0.1/169.254.169.254
- * (DNS rebinding) để lách qua chuỗi regex vốn chỉ nhận diện IP viết trực tiếp trong URL.
- */
-async function isSafeExternalUrl(url: URL): Promise<boolean> {
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-  if (isPrivateAddress(url.hostname)) return false;
-
-  try {
-    const records = await dns.lookup(url.hostname, { all: true });
-    return records.every((r) => !isPrivateAddress(r.address));
-  } catch {
-    return false; // Không resolve được thì chặn luôn, an toàn hơn là cho qua
-  }
-}
 
 const uploadFromUrlSchema = z.object({
   imageUrl: z.string().url('Invalid image URL'),
@@ -155,40 +131,10 @@ router.post('/from-url', authenticate, requireAdmin, validateBody(uploadFromUrlS
       res.status(400).json({ error: 'Invalid image URL' });
       return;
     }
-    if (!(await isSafeExternalUrl(parsedUrl))) {
-      res.status(400).json({ error: 'Image URL not allowed (only http/https to public hosts)' });
-      return;
-    }
+    // Chặn SSRF + giới hạn dung lượng: xem safeFetch.ts (không đi theo redirect, cắt khi quá 5MB).
+    const buffer = await downloadPublicImage(parsedUrl, MAX_BYTES);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-    let response: Response;
-    try {
-      // Nhiều site chặn request không có User-Agent giống trình duyệt thật (coi là bot).
-      // redirect: 'manual' — KHÔNG tự đi theo 3xx: URL gốc đã qua kiểm SSRF, nhưng URL đích
-      // redirect thì chưa, site nguồn có thể lợi dụng để trỏ sang mạng nội bộ. `!response.ok`
-      // bên dưới coi 3xx là lỗi nên chặn được, không cần thêm nhánh riêng.
-      response = await fetch(parsedUrl, {
-        signal: controller.signal,
-        redirect: 'manual',
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InternalKB-ImageFetch/1.0)' },
-      });
-    } catch {
-      res.status(400).json({ error: 'Could not download the image from the given URL (the source site may block access)' });
-      return;
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!response.ok) {
-      res.status(400).json({ error: `Could not download the image from the given URL (HTTP ${response.status})` });
-      return;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const { mime, ext } = await detectAllowedMime(buffer);
+    const { mime, ext } = detectAllowedMime(buffer);
     const url = await storeImageBuffer(buffer, mime, ext, req.user!.id);
     res.status(201).json({ url });
   } catch (err) {

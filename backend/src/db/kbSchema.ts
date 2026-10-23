@@ -32,6 +32,12 @@ import { nodeStatusEnum, nodeTypeEnum, slangTargetTypeEnum } from './enums';
  * ⚠️ Thêm/bớt cột ở đây là đổi cấu trúc của TẤT CẢ các KB — migration phải chạy cho từng schema.
  */
 
+/** Ảnh nằm trong một chunk (lấy từ node `image` của TipTap lúc index) — AI chat hiển thị kèm câu trả lời. */
+export interface ChunkImage {
+  src: string;
+  alt?: string;
+}
+
 // Custom type cho vector (pgvector) — 768 chiều, khớp `gemini-embedding-001`.
 // Extension `vector` cài ở schema `extensions` và `extensions` đã nằm trong `search_path` của
 // role ứng dụng, nên bảng nằm ở schema nào thì toán tử `<=>` vẫn giải được.
@@ -144,6 +150,8 @@ export function makeKbTables(schemaName: string | null, deps: KbTableDeps) {
       subCategory: text('sub_category'),
       provider: text('provider'),
       platform: text('platform'),
+      // Ảnh của chunk, null = không có ảnh HOẶC chunk lập trước khi có cột này (chưa re-index).
+      images: jsonb('images').$type<ChunkImage[]>(),
       createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
     (table) => [

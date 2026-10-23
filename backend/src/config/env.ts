@@ -20,26 +20,12 @@ const envSchema = z.object({
   // Bản Gemini NHẸ dùng khi model chính báo quá tải (503) kéo dài — xem gemini.provider.ts. Ghim
   // phiên bản cụ thể thay vì alias "-latest"; đã thử 21/09/2026: trả lời ~1s, không tốn token suy nghĩ.
   GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
-  // Cổng trung chuyển (relay) tự chọn — hiện trỏ tới gateway.agents.ai.vn, một bản new-api gộp
-  // nhiều nhà cung cấp sau một endpoint chuẩn OpenAI. Đặt tên CUSTOM_ thay vì tên cổng cụ thể để
-  // đổi nhà cung cấp sau này chỉ phải sửa baseUrl, không phải đổi tên biến env.
-  // LƯU Ý VỀ DỮ LIỆU: câu hỏi đi qua provider này thì toàn bộ context KB nằm trong prompt sẽ đi
-  // qua máy chủ bên thứ ba, khác với gọi thẳng Google.
-  CUSTOM_API_KEY: z.string().optional(),
   // Anthropic Claude — provider tuỳ chọn cho AI Chat, CHỈ chạy khi Admin chọn ở trang Cấu hình AI (không
   // tự nhận việc dự phòng vì tính tiền theo token — xem claude.provider.ts). Thiếu key thì tự bị bỏ qua.
   ANTHROPIC_API_KEY: z.string().optional(),
   // Model mặc định của Claude — Admin vẫn chọn model khác được trong UI. Chủ dự án chọn Sonnet 5
   // ($2/$10 mỗi triệu token vào/ra) thay cho Opus 5 ($5/$25) để cân bằng chi phí.
   CLAUDE_MODEL: z.string().default('claude-sonnet-5'),
-  // Địa chỉ cổng và model mặc định để ở env cho Admin tự đổi khi chuyển nhà cung cấp, không phải
-  // sửa code. Có .default() nên xoá khỏi .env cũng không làm backend chết — chỉ quay về giá trị
-  // dưới đây. Thiếu CUSTOM_API_KEY thì provider tự bị bỏ qua, hai biến này thành vô nghĩa.
-  CUSTOM_BASE_URL: z.string().url('CUSTOM_BASE_URL phải là URL hợp lệ').default('https://gateway.agents.ai.vn/v1'),
-  // Giống quan hệ GEMINI_MODEL <-> app_settings.chat_model: đây chỉ là model MẶC ĐỊNH của
-  // provider (dùng khi Admin chưa chọn, hoặc khi provider này chạy với vai trò dự phòng).
-  // Model đang chạy thật do Admin chọn trong UI và lưu ở app_settings.chat_model.
-  CUSTOM_MODEL: z.string().default('deepseek.v3.2'),
   // Telegram Bot — kênh hỏi đáp AI thứ 2 bên cạnh web (xem modules/telegram).
   // Optional: KHÔNG có token thì backend vẫn khởi động bình thường, chỉ là bot không chạy —
   // giữ như vậy để máy dev nào không cần bot vẫn chạy được toàn bộ phần còn lại.

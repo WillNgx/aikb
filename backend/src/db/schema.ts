@@ -253,27 +253,6 @@ export const telegramUsers = pgTable(
 );
 
 
-// ─── custom_ai_gateways ───────────────────────────────────────────────────────
-// Danh sách các cổng AI Custom (OpenAI-compatible) do Admin tự cấu hình.
-// Lưu trong DB để Admin có thể thêm/sửa/xóa trực tiếp từ giao diện.
-export const customAiGateways = pgTable(
-  'custom_ai_gateways',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    name: text('name').notNull(),
-    baseUrl: text('base_url').notNull(),
-    apiKey: text('api_key').notNull(),
-    defaultModel: text('default_model').notNull(),
-    suggestedModels: text('suggested_models').array(),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index('custom_ai_gateways_is_active_idx').on(table.isActive),
-  ]
-);
-
 // ─── Type exports ─────────────────────────────────────────────────────────────
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -296,5 +275,3 @@ export type Promotion = typeof promotions.$inferSelect;
 export type NewPromotion = typeof promotions.$inferInsert;
 export type PromotionVersion = typeof promotionVersions.$inferSelect;
 export type NewPromotionVersion = typeof promotionVersions.$inferInsert;
-export type CustomAiGateway = typeof customAiGateways.$inferSelect;
-export type NewCustomAiGateway = typeof customAiGateways.$inferInsert;

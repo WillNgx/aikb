@@ -6,7 +6,7 @@
  */
 
 /** Danh sách provider built-in được hỗ trợ cho phần sinh câu trả lời (chat). */
-export const BUILTIN_CHAT_PROVIDER_IDS = ['custom', 'gemini', 'claude'] as const;
+export const BUILTIN_CHAT_PROVIDER_IDS = ['gemini', 'claude'] as const;
 export const CHAT_PROVIDER_IDS = BUILTIN_CHAT_PROVIDER_IDS;
 export type BuiltinChatProviderId = (typeof BUILTIN_CHAT_PROVIDER_IDS)[number];
 export type ChatProviderId = BuiltinChatProviderId | (string & {});
@@ -17,7 +17,7 @@ export type ChatProviderId = BuiltinChatProviderId | (string & {});
  */
 // `claude` CỐ Ý không có mặt ở đây: tính tiền theo token nên chỉ chạy khi Admin chủ động chọn làm nguồn
 // chính — không tự nhận việc mỗi khi Gemini lỗi (xem claude.provider.ts).
-export const FALLBACK_ORDER: ChatProviderId[] = ['custom', 'gemini'];
+export const FALLBACK_ORDER: ChatProviderId[] = ['gemini'];
 
 export interface ChatParams {
   /** System prompt — tách riêng khỏi context KB để chống prompt injection. */
@@ -67,10 +67,6 @@ export interface ChatProvider {
   suggestedModels: string[];
   /** Tên biến môi trường chứa API key của provider này (chỉ để hiển thị hướng dẫn, không trả giá trị). */
   apiKeyEnvName?: string;
-  /** Đánh dấu là cổng custom từ DB */
-  isCustom?: boolean;
-  /** ID trong DB nếu là cổng custom */
-  customGatewayId?: string;
   /** Có API key hay chưa — thiếu key thì provider bị bỏ qua hoàn toàn. */
   hasApiKey(): boolean;
   generate(params: ChatParams): Promise<ChatResult>;

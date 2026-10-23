@@ -148,6 +148,20 @@
       "when": 1791976695201,
       "tag": "0020_breezy_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792665869329,
+      "tag": "0021_dry_jazinda",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792744922580,
+      "tag": "0022_bo_custom_ai_gateways",
+      "breakpoints": true
     }
   ]
 }

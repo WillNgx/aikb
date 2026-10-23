@@ -55,6 +55,13 @@ export interface AiCitation {
   excerpt: string;
 }
 
+export interface AiAnswerImage {
+  src: string;
+  alt?: string;
+  contentId: string;
+  contentTitle: string;
+}
+
 export interface AiSuggestion {
   contentId: string;
   contentTitle: string;
@@ -71,6 +78,7 @@ export interface AiClarificationOption {
 export interface AiChatResponse {
   answer: string;
   citations: AiCitation[];
+  images?: AiAnswerImage[];
   hasAnswer: boolean;
   suggestions?: AiSuggestion[];
   needsClarification?: boolean;
@@ -263,21 +271,7 @@ export interface AIProviderInfo {
   defaultModel: string;
   suggestedModels: string[];
   apiKeyEnvName?: string;
-  isCustom?: boolean;
-  customGatewayId?: string;
   hasApiKey: boolean;
-}
-
-export interface CustomAIGateway {
-  id: string;
-  name: string;
-  baseUrl: string;
-  apiKeyMasked: string;
-  defaultModel: string;
-  suggestedModels: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface AIProviderSettings {
@@ -376,43 +370,6 @@ export const adminApi = {
     api
       .get('/admin/settings/ai-provider/models', { params: { provider }, timeout: 60000 })
       .then((r) => r.data),
-  // Custom AI Gateways
-  listCustomAIGateways: (): Promise<{ gateways: CustomAIGateway[] }> =>
-    api.get('/admin/settings/ai-gateways').then((r) => r.data),
-  createCustomAIGateway: (data: {
-    name: string;
-    baseUrl: string;
-    apiKey: string;
-    defaultModel: string;
-    suggestedModels?: string[];
-    isActive?: boolean;
-  }): Promise<CustomAIGateway> =>
-    api.post('/admin/settings/ai-gateways', data).then((r) => r.data),
-  updateCustomAIGateway: (
-    id: string,
-    data: {
-      name?: string;
-      baseUrl?: string;
-      apiKey?: string;
-      defaultModel?: string;
-      suggestedModels?: string[];
-      isActive?: boolean;
-    },
-  ): Promise<CustomAIGateway> =>
-    api.put(`/admin/settings/ai-gateways/${id}`, data).then((r) => r.data),
-  deleteCustomAIGateway: (id: string): Promise<{ success: boolean }> =>
-    api.delete(`/admin/settings/ai-gateways/${id}`).then((r) => r.data),
-  testDirectCustomGateway: (data: {
-    baseUrl: string;
-    apiKey: string;
-    model: string;
-  }): Promise<AIProviderTestResult> =>
-    api.post('/admin/settings/ai-gateways/test-direct', data, { timeout: 60000 }).then((r) => r.data),
-  listDirectCustomGatewayModels: (data: {
-    baseUrl: string;
-    apiKey: string;
-  }): Promise<{ supported: boolean; models: string[] }> =>
-    api.post('/admin/settings/ai-gateways/models-direct', data, { timeout: 60000 }).then((r) => r.data),
   // Thống kê token AI Chat — chỉ phần chat, gộp chung câu hỏi từ web và Telegram
   getTokenUsage: (granularity: 'day' | 'month', range: number): Promise<TokenUsageReport> =>
     api.get('/admin/token-usage', { params: { granularity, range } }).then((r) => r.data),
@@ -425,6 +382,10 @@ export const adminApi = {
   reindexAll: () => api.post('/admin/reindex').then((r) => r.data),
   retryFailedReindex: () => api.post('/admin/reindex/retry-failed').then((r) => r.data),
   getReindexStatus: () => api.get('/admin/reindex/status').then((r) => r.data),
+  getStaleArticles: () => api.get('/admin/reindex/stale').then((r) => r.data),
+  // Re-index lẻ chạy đồng bộ, có thể phải chờ quota Gemini → nới timeout mặc định 30s.
+  reindexOne: (id: string) =>
+    api.post(`/admin/reindex/node/${id}`, undefined, { timeout: 5 * 60 * 1000 }).then((r) => r.data),
   // Publish All (Đăng toàn bộ Draft)
   publishAll: () => api.post('/admin/publish-all').then((r) => r.data),
   getPublishAllStatus: () => api.get('/admin/publish-all/status').then((r) => r.data),

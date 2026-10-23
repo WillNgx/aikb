@@ -1,13 +1,8 @@
 import { db } from '../../db';
-import { appSettings, customAiGateways, CustomAiGateway, NewCustomAiGateway } from '../../db/schema';
-import { eq, inArray, desc } from 'drizzle-orm';
+import { appSettings } from '../../db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { geminiProvider } from './providers/gemini.provider';
 import { claudeProvider } from './providers/claude.provider';
-import {
-  customProvider,
-  createCustomGatewayProvider,
-  createOpenAICompatibleProvider,
-} from './providers/openaiCompatible.provider';
 import { recordTokenUsage } from '../tokenUsage/tokenUsage.service';
 import {
   AllProvidersExhaustedError,
@@ -31,7 +26,6 @@ export const CHAT_MODEL_KEY = 'chat_model';
 const DEFAULT_CHAT_PROVIDER: ChatProviderId = 'gemini';
 
 const BUILTIN_PROVIDERS: Record<BuiltinChatProviderId, ChatProvider> = {
-  custom: customProvider,
   gemini: geminiProvider,
   claude: claudeProvider,
 };
@@ -39,21 +33,6 @@ const BUILTIN_PROVIDERS: Record<BuiltinChatProviderId, ChatProvider> = {
 export async function getProvider(id: ChatProviderId): Promise<ChatProvider | undefined> {
   if (id in BUILTIN_PROVIDERS) {
     return BUILTIN_PROVIDERS[id as BuiltinChatProviderId];
-  }
-
-  if (id.startsWith('custom_')) {
-    const gatewayId = id.replace('custom_', '');
-    try {
-      const [gateway] = await db
-        .select()
-        .from(customAiGateways)
-        .where(eq(customAiGateways.id, gatewayId));
-      if (gateway && gateway.isActive) {
-        return createCustomGatewayProvider(gateway);
-      }
-    } catch (err) {
-      console.error(`[LLM] Lỗi tìm custom gateway ${id}:`, err);
-    }
   }
 
   return undefined;
@@ -65,7 +44,7 @@ export function isBuiltinChatProviderId(value: string): value is BuiltinChatProv
 
 export function isChatProviderId(value: string): boolean {
   if (typeof value !== 'string' || !value.trim()) return false;
-  return isBuiltinChatProviderId(value) || value.startsWith('custom_');
+  return isBuiltinChatProviderId(value);
 }
 
 // ─── Cấu hình (app_settings + cache) ─────────────────────────────────────────
@@ -220,8 +199,6 @@ export interface ProviderStatus {
   defaultModel: string;
   suggestedModels: string[];
   apiKeyEnvName?: string;
-  isCustom?: boolean;
-  customGatewayId?: string;
   /** Chỉ báo đã có key hay chưa — KHÔNG bao giờ trả giá trị key về frontend. */
   hasApiKey: boolean;
 }
@@ -234,7 +211,6 @@ export async function getChatProviderSettings(): Promise<{
 }> {
   const config = await getChatConfig();
 
-  // 1. Builtin providers
   const builtinStatuses: ProviderStatus[] = BUILTIN_CHAT_PROVIDER_IDS.map((id) => {
     const p = BUILTIN_PROVIDERS[id];
     return {
@@ -243,38 +219,15 @@ export async function getChatProviderSettings(): Promise<{
       defaultModel: p.defaultModel,
       suggestedModels: p.suggestedModels,
       apiKeyEnvName: p.apiKeyEnvName,
-      isCustom: false,
       hasApiKey: p.hasApiKey(),
     };
   });
-
-  // 2. Custom gateways from DB
-  let customStatuses: ProviderStatus[] = [];
-  try {
-    const gateways = await db
-      .select()
-      .from(customAiGateways)
-      .where(eq(customAiGateways.isActive, true))
-      .orderBy(desc(customAiGateways.createdAt));
-
-    customStatuses = gateways.map((g) => ({
-      id: `custom_${g.id}`,
-      label: `${g.name} (Custom)`,
-      defaultModel: g.defaultModel,
-      suggestedModels: g.suggestedModels && g.suggestedModels.length > 0 ? g.suggestedModels : [g.defaultModel],
-      isCustom: true,
-      customGatewayId: g.id,
-      hasApiKey: !!g.apiKey,
-    }));
-  } catch (err) {
-    console.error('[LLM] Không thể tải custom gateways từ DB:', err);
-  }
 
   return {
     providerId: config.providerId,
     model: config.model,
     fallbackOrder: FALLBACK_ORDER,
-    providers: [...builtinStatuses, ...customStatuses],
+    providers: builtinStatuses,
   };
 }
 
@@ -294,10 +247,7 @@ export async function testChatProvider(
   const targetModel = model?.trim() || provider.defaultModel;
 
   if (!provider.hasApiKey()) {
-    const msg = provider.apiKeyEnvName
-      ? `${provider.apiKeyEnvName} is not configured in the .env file at the repo root`
-      : 'This gateway has no API Key';
-    throw new Error(msg);
+    throw new Error(`${provider.apiKeyEnvName} is not configured in the .env file at the repo root`);
   }
 
   const result = await provider.generate({
@@ -326,10 +276,7 @@ export async function fetchProviderModels(
   }
 
   if (!provider.hasApiKey()) {
-    const msg = provider.apiKeyEnvName
-      ? `${provider.apiKeyEnvName} is not configured in the .env file at the repo root`
-      : 'This gateway has no API Key';
-    throw new Error(msg);
+    throw new Error(`${provider.apiKeyEnvName} is not configured in the .env file at the repo root`);
   }
   if (!provider.listModels) {
     return { supported: false, models: [] };
@@ -344,195 +291,4 @@ export async function resetChatConfig(): Promise<void> {
   await db.delete(appSettings).where(eq(appSettings.key, CHAT_PROVIDER_KEY));
   await db.delete(appSettings).where(eq(appSettings.key, CHAT_MODEL_KEY));
   invalidateChatConfigCache();
-}
-
-// ─── CRUD Quản lý Custom AI Gateways từ DB ─────────────────────────────────────
-
-export interface CustomGatewayPublicItem {
-  id: string;
-  name: string;
-  baseUrl: string;
-  apiKeyMasked: string;
-  defaultModel: string;
-  suggestedModels: string[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-function maskApiKey(key: string): string {
-  if (!key) return '';
-  if (key.length <= 8) return '********';
-  return `${key.slice(0, 3)}***${key.slice(-4)}`;
-}
-
-export async function listCustomGateways(): Promise<CustomGatewayPublicItem[]> {
-  const list = await db.select().from(customAiGateways).orderBy(desc(customAiGateways.createdAt));
-  return list.map((g) => ({
-    id: g.id,
-    name: g.name,
-    baseUrl: g.baseUrl,
-    apiKeyMasked: maskApiKey(g.apiKey),
-    defaultModel: g.defaultModel,
-    suggestedModels: g.suggestedModels ?? [],
-    isActive: g.isActive,
-    createdAt: g.createdAt,
-    updatedAt: g.updatedAt,
-  }));
-}
-
-export async function createCustomGateway(data: {
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  defaultModel: string;
-  suggestedModels?: string[];
-  isActive?: boolean;
-}): Promise<CustomGatewayPublicItem> {
-  const [created] = await db
-    .insert(customAiGateways)
-    .values({
-      name: data.name.trim(),
-      baseUrl: data.baseUrl.trim(),
-      apiKey: data.apiKey.trim(),
-      defaultModel: data.defaultModel.trim(),
-      suggestedModels: data.suggestedModels ?? [data.defaultModel.trim()],
-      isActive: data.isActive ?? true,
-    })
-    .returning();
-
-  invalidateChatConfigCache();
-
-  return {
-    id: created.id,
-    name: created.name,
-    baseUrl: created.baseUrl,
-    apiKeyMasked: maskApiKey(created.apiKey),
-    defaultModel: created.defaultModel,
-    suggestedModels: created.suggestedModels ?? [],
-    isActive: created.isActive,
-    createdAt: created.createdAt,
-    updatedAt: created.updatedAt,
-  };
-}
-
-export async function updateCustomGateway(
-  id: string,
-  data: {
-    name?: string;
-    baseUrl?: string;
-    apiKey?: string;
-    defaultModel?: string;
-    suggestedModels?: string[];
-    isActive?: boolean;
-  },
-): Promise<CustomGatewayPublicItem> {
-  const [existing] = await db.select().from(customAiGateways).where(eq(customAiGateways.id, id));
-  if (!existing) {
-    throw new Error('Custom AI gateway not found');
-  }
-
-  const updateValues: Partial<NewCustomAiGateway> = {
-    updatedAt: new Date(),
-  };
-
-  if (data.name !== undefined) updateValues.name = data.name.trim();
-  if (data.baseUrl !== undefined) updateValues.baseUrl = data.baseUrl.trim();
-  if (data.apiKey !== undefined && data.apiKey.trim() !== '') {
-    updateValues.apiKey = data.apiKey.trim();
-  }
-  if (data.defaultModel !== undefined) updateValues.defaultModel = data.defaultModel.trim();
-  if (data.suggestedModels !== undefined) updateValues.suggestedModels = data.suggestedModels;
-  if (data.isActive !== undefined) updateValues.isActive = data.isActive;
-
-  const [updated] = await db
-    .update(customAiGateways)
-    .set(updateValues)
-    .where(eq(customAiGateways.id, id))
-    .returning();
-
-  invalidateChatConfigCache();
-
-  return {
-    id: updated.id,
-    name: updated.name,
-    baseUrl: updated.baseUrl,
-    apiKeyMasked: maskApiKey(updated.apiKey),
-    defaultModel: updated.defaultModel,
-    suggestedModels: updated.suggestedModels ?? [],
-    isActive: updated.isActive,
-    createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
-  };
-}
-
-export async function deleteCustomGateway(id: string): Promise<void> {
-  const [existing] = await db.select().from(customAiGateways).where(eq(customAiGateways.id, id));
-  if (!existing) {
-    throw new Error('Custom AI gateway not found');
-  }
-
-  await db.delete(customAiGateways).where(eq(customAiGateways.id, id));
-
-  // Nếu đang được chọn làm active chat provider thì chuyển về gemini
-  const currentConfig = await getChatConfig();
-  if (currentConfig.providerId === `custom_${id}`) {
-    await saveChatConfig(DEFAULT_CHAT_PROVIDER, BUILTIN_PROVIDERS.gemini.defaultModel);
-  }
-
-  invalidateChatConfigCache();
-}
-
-/**
- * Test trực tiếp một kết nối custom gateway (dùng khi Admin nhập form trước khi bấm Lưu)
- */
-export async function testDirectGateway(data: {
-  baseUrl: string;
-  apiKey: string;
-  model: string;
-}): Promise<{ ok: true; model: string; sample: string }> {
-  const tempProvider = createOpenAICompatibleProvider({
-    id: 'custom_test_temp',
-    label: 'Test Gateway',
-    baseUrl: data.baseUrl.trim(),
-    getApiKey: () => data.apiKey.trim(),
-    defaultModel: data.model.trim(),
-    suggestedModels: [data.model.trim()],
-    requestTimeoutMs: 30_000,
-  });
-
-  const result = await tempProvider.generate({
-    systemPrompt: 'Bạn là trợ lý kiểm tra kết nối. Trả lời đúng một từ.',
-    userMessage: 'Trả lời đúng một từ: OK',
-    model: data.model.trim(),
-    temperature: 0,
-    maxOutputTokens: 32,
-  });
-
-  return { ok: true, model: data.model.trim(), sample: result.text.trim().slice(0, 100) };
-}
-
-/**
- * Tải danh sách model trực tiếp từ baseUrl + apiKey
- */
-export async function listDirectGatewayModels(data: {
-  baseUrl: string;
-  apiKey: string;
-}): Promise<{ supported: boolean; models: string[] }> {
-  const tempProvider = createOpenAICompatibleProvider({
-    id: 'custom_test_temp',
-    label: 'Test Gateway',
-    baseUrl: data.baseUrl.trim(),
-    getApiKey: () => data.apiKey.trim(),
-    defaultModel: 'default',
-    suggestedModels: [],
-    requestTimeoutMs: 30_000,
-  });
-
-  if (!tempProvider.listModels) {
-    return { supported: false, models: [] };
-  }
-
-  const models = await tempProvider.listModels();
-  return { supported: true, models };
 }
