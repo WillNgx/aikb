@@ -407,6 +407,8 @@ export async function getStaleArticles(): Promise<{ total: number; stale: StaleA
   return { total: published.length, stale };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 let singleReindexRunning = false;
 
 /**
@@ -415,6 +417,8 @@ let singleReindexRunning = false;
  * phải xếp hàng tuần tự, không chạy chồng.
  */
 export async function reindexOneArticle(id: string): Promise<void> {
+  // id không phải UUID thì không thể tồn tại; để lọt xuống DB sẽ thành lỗi cast uuid (500).
+  if (!UUID_RE.test(id)) throw notFound('Node not found');
   const { nodes } = kbTables();
   const [item] = await db
     .select({ type: nodes.type, status: nodes.status })

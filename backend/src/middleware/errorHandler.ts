@@ -27,6 +27,13 @@ export function errorHandler(
     return;
   }
 
+  // Body quá lớn (vượt limit của express.json) do body-parser ném, mang sẵn status 413 — trả đúng
+  // 413 thay vì 500 để client biết là lỗi do mình gửi, không phải lỗi server.
+  if ((err as Error & { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({ error: 'Request body is too large' });
+    return;
+  }
+
   // aiName được service gắn vào lỗi khi provider AI hết quota (429/RESOURCE_EXHAUSTED) — cho phép
   // frontend nhận diện đúng loại lỗi này để log riêng, không lẫn với lỗi server khác.
   const aiName = (err as Error & { aiName?: string }).aiName;
