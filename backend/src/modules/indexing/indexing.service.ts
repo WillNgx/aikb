@@ -454,11 +454,11 @@ export async function reindexOneArticle(id: string): Promise<void> {
  * Cách xử lý: dựng lại lưới đầy đủ, LẶP LẠI nội dung ô gộp ở mọi cột/hàng mà nó phủ — giống
  * cách các công cụ xử lý bảng thường làm khi làm phẳng. Nhờ vậy mọi hàng luôn có đúng số cột.
  */
-export function flattenTable(table: TiptapNodeLike): string {
+function tableToGrid(table: TiptapNodeLike): string[][] {
   const rows = table.content || [];
   /** Ô đang phủ xuống các hàng dưới do rowspan: cột → { text, số hàng còn lại } */
   const dangPhuXuong = new Map<number, { text: string; conLai: number }>();
-  const dongText: string[] = [];
+  const grid: string[][] = [];
 
   for (const row of rows) {
     const oTrongHang = row.content || [];
@@ -492,18 +492,151 @@ export function flattenTable(table: TiptapNodeLike): string {
       }
     }
 
-    dongText.push(hang.join(' | '));
+    grid.push(hang);
   }
 
-  return dongText.join('\n');
+  return grid;
 }
 
-interface Chunk {
+/** Bảng → text phẳng, mỗi hàng nối bằng " | " (không gắn tên cột). Dùng cho bảng lồng và bảng không có hàng tiêu đề. */
+export function flattenTable(table: TiptapNodeLike): string {
+  return tableToGrid(table)
+    .map((hang) => hang.join(' | '))
+    .join('\n');
+}
+
+// ─── Chunk cho bảng (3 tầng) ──────────────────────────────────────────────────
+//
+// Vấn đề của `flattenTable` thuần: ô chỉ là "30 ngày | 7 ngày | 3 tháng" — giá trị không mang theo
+// tên cột, nên hỏi "Sexy Gaming lưu lịch sử bao lâu" thì model phải tự đếm cột thứ mấy. Bảng lớn
+// (vd. bảng huỷ cược 6.000 ký tự, mỗi hàng là một chủ đề riêng) thì cả bảng thành một vector loãng.
+//
+//  Tầng A — mọi bảng có hàng tiêu đề: viết lại từng hàng kèm tên cột ("Lịch sử cược — Sexy Gaming:
+//           7 ngày; …"). Bảng nhỏ vẫn nằm trong chunk của section như cũ.
+//  Tầng C — bảng dài hơn TABLE_INLINE_MAX: tách theo hàng thành các chunk riêng (mỗi chunk lặp tiền
+//           tố bài + đường dẫn heading, nhãn thêm tên hàng), ảnh trong ô đi theo đúng chunk chứa hàng.
+//  Tầng B — ma trận so sánh (ô góc trái-trên để trống, ≥3 cột, ≥3 hàng): thêm 1 chunk MỖI CỘT
+//           ("Sexy Gaming — Cược tối thiểu: …; Lịch sử: …") để hỏi riêng một sảnh vẫn khớp chính xác.
+//           Chunk theo cột kế thừa ảnh của section (ảnh chat chỉ lấy từ chunk xếp đầu).
+//
+// Chỉ áp cho bảng nằm TRỰC TIẾP dưới doc. Bảng lồng trong danh sách/callout/ô bảng vẫn dùng
+// flattenTable (extractNodeText) như trước.
+
+/**
+ * Bảng đã serialize dài hơn mức này (ký tự) thì tách thành chunk riêng theo hàng, không nằm lẫn trong
+ * chunk section. 600 chứ không phải 1.500: bảng ~1.000 ký tự nằm chung chunk 1.800 ký tự với đoạn văn
+ * khác thì vector bị loãng — ô "PS1 × mở cược" xếp hạng 7/9 và rớt khỏi top 5 mà chat đọc (đo
+ * 2026-11-26). Mô phỏng 204 file: 1500→600 thêm 25 chunk, chunk dài nhất không đổi.
+ */
+const TABLE_INLINE_MAX = 600;
+/** Mỗi chunk tách ra gom các hàng cho tới khoảng này (một hàng dài hơn thì tự thành chunk). */
+const TABLE_GROUP_MAX = 1500;
+/** Ma trận so sánh: số cột tối đa được sinh chunk theo cột (vượt thì bỏ tầng B). */
+const MATRIX_MAX_COLUMNS = 12;
+const MATRIX_MIN_COLUMNS = 3;
+const MATRIX_MIN_ROWS = 3;
+/** Nhãn hàng dài hơn mức này không đưa vào nhãn chunk. */
+const ROW_LABEL_MAX = 60;
+/** Khi ô đầu không dùng được làm nhãn: lấy tối đa chừng này ký tự đầu của ô có chữ. */
+const ROW_SNIPPET_MAX = 40;
+
+/** Gọn ô bảng: bỏ chỗ giữ ảnh "[Hình ảnh: …]" (ảnh đi theo chunk riêng, chữ này chỉ làm nhiễu nhãn/câu). */
+const cleanCell = (s: string): string =>
+  s
+    .replace(/\[Hình ảnh:[^\]]*\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+interface TableModel {
+  /** true nếu hàng đầu toàn ô tiêu đề (tableHeader) và bảng có ≥ 2 hàng. */
+  hasHeader: boolean;
+  /** Lưới ô đầy đủ (đã trải ô gộp), gồm cả hàng tiêu đề. */
+  grid: string[][];
+  /** Một dòng text cho mỗi hàng thân (hasHeader: kèm tên cột; không có tiêu đề: nối " | " như cũ). */
+  lines: string[];
+  /** Node hàng ứng với `lines` (để lấy ảnh trong ô). */
+  rowNodes: TiptapNodeLike[];
+  /** Nhãn hàng (ô đầu) ứng với `lines`, rỗng nếu không dùng được. */
+  labels: string[];
+}
+
+function rowSentence(header: string[], cells: string[]): string {
+  const filled = cells.map(cleanCell);
+  // Hàng gộp toàn chiều ngang (mọi ô cùng nội dung): một câu, không lặp tên cột.
+  const distinct = new Set(filled.filter(Boolean));
+  if (distinct.size === 1 && filled.length > 1) return [...distinct][0];
+
+  // Ô góc trống = bảng ma trận: ô đầu mỗi hàng là nhãn hàng, các ô còn lại gắn tên cột.
+  const hasRowLabel = !cleanCell(header[0] ?? '');
+  const start = hasRowLabel ? 1 : 0;
+  const pairs: string[] = [];
+  for (let i = start; i < filled.length; i++) {
+    if (!filled[i]) continue;
+    const h = cleanCell(header[i] ?? '') || (hasRowLabel ? '' : `Cột ${i + 1}`);
+    pairs.push(h ? `${h}: ${filled[i]}` : filled[i]);
+  }
+  const body = pairs.join('; ');
+  return hasRowLabel && filled[0] ? `${filled[0]} — ${body}` : body;
+}
+
+function buildTableModel(table: TiptapNodeLike): TableModel {
+  const grid = tableToGrid(table);
+  const rowNodes = table.content || [];
+  const hasHeader =
+    grid.length >= 2 && (rowNodes[0]?.content || []).length > 0 && (rowNodes[0].content || []).every((c) => c.type === 'tableHeader');
+  const from = hasHeader ? 1 : 0;
+  const bodyGrid = grid.slice(from);
+  const lines = bodyGrid.map((cells) => (hasHeader ? rowSentence(grid[0], cells) : cells.join(' | ')));
+  // Nhãn hàng: ô đầu nếu ngắn; không thì đoạn đầu của ô đầu tiên có chữ (vd. ô đầu chỉ chứa ảnh).
+  const labels = bodyGrid.map((cells) => {
+    const l = cleanCell(cells[0] ?? '');
+    if (l && l.length <= ROW_LABEL_MAX) return l;
+    const first = cells.map(cleanCell).find(Boolean) ?? '';
+    if (first.length <= ROW_SNIPPET_MAX) return first;
+    return `${first.slice(0, ROW_SNIPPET_MAX).replace(/\s+\S*$/, '')}…`;
+  });
+  return { hasHeader, grid, lines, rowNodes: rowNodes.slice(from), labels };
+}
+
+/** Gom các hàng liền nhau thành nhóm ≤ TABLE_GROUP_MAX ký tự (hàng dài hơn tự thành nhóm). */
+function groupTableRows(lines: string[]): number[][] {
+  const groups: number[][] = [];
+  let cur: number[] = [];
+  let len = 0;
+  lines.forEach((line, i) => {
+    if (cur.length > 0 && len + line.length + 1 > TABLE_GROUP_MAX) {
+      groups.push(cur);
+      cur = [];
+      len = 0;
+    }
+    cur.push(i);
+    len += line.length + 1;
+  });
+  if (cur.length > 0) groups.push(cur);
+  return groups;
+}
+
+/** Ma trận so sánh: hàng tiêu đề có ô góc trống, đủ cột/hàng. */
+function isMatrixTable(m: TableModel): boolean {
+  if (!m.hasHeader) return false;
+  const cols = m.grid[0].length;
+  return !cleanCell(m.grid[0][0] ?? '') && cols >= MATRIX_MIN_COLUMNS && cols <= MATRIX_MAX_COLUMNS && m.lines.length >= MATRIX_MIN_ROWS;
+}
+
+/** Dấu nối các heading trong nhãn section; khớp ký hiệu "›" frontend dùng khi hiện nguồn trích dẫn. */
+const HEADING_PATH_SEPARATOR = ' › ';
+
+export interface Chunk {
   sectionTitle: string | null;
   headingIndex: number | null;
   text: string;
   images: ChunkImage[];
+  /** Chunk phát sinh từ bảng (tách theo hàng / theo cột). Không có = chunk section thường. Không lưu DB. */
+  kind?: 'table_rows' | 'table_column';
 }
+
+/** Chunk phát sinh từ bảng trong lúc duyệt section; `inheritImages` = lấy ảnh của cả section lúc flush. */
+type ExtraChunk = Chunk & { inheritImages?: boolean };
 
 // ─── TipTap Doc Parser (bảng `nodes` — Wiki thật) ─────────────────────────────
 
@@ -558,10 +691,16 @@ function collectImages(node: TiptapNodeLike, out: ChunkImage[]): void {
  * heading tiếp theo. horizontalRule = ranh giới chunk cưỡng bức trong cùng 1 section (giống
  * "divider" của mô hình cũ), không tự mở section mới.
  */
-function parseDocToChunks(doc: TiptapDocLike | null, articleTitle: string): Chunk[] {
+export function parseDocToChunks(doc: TiptapDocLike | null, articleTitle: string): Chunk[] {
   const titlePrefix = `[Tài liệu: ${articleTitle}]`;
   const chunks: Chunk[] = [];
   const topLevelNodes = doc?.content || [];
+
+  // Nhãn section mang CẢ đường dẫn heading cha ("Kèo A › Cách thanh toán"), không chỉ heading
+  // cuối: H2 chung chung ("Cách thanh toán", "Cược chính") lặp ở nhiều H1 nếu chỉ lấy chữ của
+  // chính nó thì hai chunk có nhãn y hệt, vector/keyword search lấy nhầm mà không báo lỗi.
+  // `headingPath` là ngăn xếp theo cấp: gặp heading cấp L thì bỏ mọi heading cấp >= L rồi đẩy vào.
+  const headingPath: { level: number; text: string }[] = [];
 
   let sectionTitle: string | null = null;
   // Đếm heading theo đúng thứ tự xuất hiện — khớp với extractTocFromDoc/HeadingAnchor phía
@@ -571,28 +710,114 @@ function parseDocToChunks(doc: TiptapDocLike | null, articleTitle: string): Chun
   let currentHeadingIndex: number | null = null;
   let parts: string[] = [];
   let images: ChunkImage[] = [];
+  let extras: ExtraChunk[] = [];
+  /** Số bảng đã gặp trong section hiện tại (để nhãn "bảng 2, hàng 1" không trùng bảng 1). */
+  let tableCount = 0;
 
   function flushSection() {
     const text = parts.map((p) => p.trim()).filter(Boolean).join('\n');
     const sectionImages = images;
+    const sectionExtras = extras;
     parts = [];
     images = [];
+    extras = [];
+    tableCount = 0;
     // Section chỉ có ảnh (không chữ) vẫn thành chunk: nếu bỏ, ảnh biến mất khỏi AI chat.
-    if (!text && sectionImages.length === 0) return;
-    const fullText = `${titlePrefix} ${sectionTitle ? `[Phần: ${sectionTitle}] ` : ''}${text}`.trimEnd();
-    chunks.push({ sectionTitle, headingIndex: currentHeadingIndex, text: fullText, images: sectionImages });
+    if (text || sectionImages.length > 0) {
+      const fullText = `${titlePrefix} ${sectionTitle ? `[Phần: ${sectionTitle}] ` : ''}${text}`.trimEnd();
+      chunks.push({ sectionTitle, headingIndex: currentHeadingIndex, text: fullText, images: sectionImages });
+    }
+    // Chunk từ bảng (tách theo hàng / theo cột) đi liền sau chunk section của chúng.
+    for (const e of sectionExtras) {
+      chunks.push({
+        sectionTitle: e.sectionTitle,
+        headingIndex: e.headingIndex,
+        text: e.text,
+        images: e.inheritImages ? sectionImages : e.images,
+        kind: e.kind,
+      });
+    }
+  }
+
+  /**
+   * Bảng nằm trực tiếp dưới doc → 3 tầng (xem chú thích "Chunk cho bảng" ở trên):
+   * A = serialize kèm tên cột; C = bảng dài tách theo hàng; B = ma trận so sánh thêm chunk theo cột.
+   */
+  function handleTable(node: TiptapNodeLike) {
+    const m = buildTableModel(node);
+    tableCount += 1;
+    const total = m.lines.reduce((s, l) => s + l.length + 1, 0);
+    const labelled = (label: string, body: string) => {
+      const st = [sectionTitle, label].filter(Boolean).join(HEADING_PATH_SEPARATOR);
+      return { sectionTitle: st, text: `${titlePrefix} [Phần: ${st}] ${body}` };
+    };
+
+    if (total <= TABLE_INLINE_MAX) {
+      parts.push(m.lines.join('\n'));
+      collectImages(node, images);
+    } else {
+      // Bảng không có hàng tiêu đề: hàng đầu được lặp lại ở các nhóm sau để chunk nào cũng có tiêu đề.
+      const repeat = !m.hasHeader && m.lines.length > 1 ? m.lines[0] : null;
+      for (const g of groupTableRows(m.lines)) {
+        const names = g.map((i) => m.labels[i]).filter(Boolean);
+        const label = names.length
+          ? names.slice(0, 3).join(', ') + (names.length > 3 ? '…' : '')
+          : `${tableCount > 1 ? `bảng ${tableCount}, ` : ''}hàng ${g[0] + 1}${g.length > 1 ? `–${g[g.length - 1] + 1}` : ''}`;
+        const rowImages: ChunkImage[] = [];
+        g.forEach((i) => collectImages(m.rowNodes[i], rowImages));
+        const body = [...(repeat && g[0] !== 0 ? [repeat] : []), ...g.map((i) => m.lines[i])].join('\n');
+        extras.push({ ...labelled(label, body), headingIndex: currentHeadingIndex, images: rowImages, kind: 'table_rows' });
+      }
+    }
+
+    if (isMatrixTable(m)) {
+      const bodyGrid = m.grid.slice(1);
+      const seen = new Set<string>();
+      for (let c = 1; c < m.grid[0].length; c++) {
+        const colName = cleanCell(m.grid[0][c] ?? '');
+        // Tiêu đề cột trống hoặc lặp (ô tiêu đề gộp nhiều cột) thì bỏ qua.
+        if (!colName || seen.has(colName.toLowerCase())) continue;
+        seen.add(colName.toLowerCase());
+        const rows = bodyGrid
+          .map((cells, r) => {
+            const v = cleanCell(cells[c] ?? '');
+            return v ? `${cleanCell(cells[0] ?? '') || `Mục ${r + 1}`}: ${v}` : '';
+          })
+          .filter(Boolean);
+        if (rows.length === 0) continue;
+        extras.push({
+          ...labelled(colName, `${colName}\n${rows.join('\n')}`),
+          headingIndex: currentHeadingIndex,
+          images: [],
+          inheritImages: true,
+          kind: 'table_column',
+        });
+      }
+    }
   }
 
   for (const node of topLevelNodes) {
     if (node.type === 'heading') {
       flushSection();
-      sectionTitle = extractInlineText(node).trim() || sectionTitle;
+      const headingText = extractInlineText(node).trim();
+      if (headingText) {
+        const level = node.attrs?.level ?? 1;
+        while (headingPath.length > 0 && headingPath[headingPath.length - 1].level >= level) headingPath.pop();
+        // Heading con trùng chữ với heading cha ("Cược chính" > "Cược chính") thì không lặp lại.
+        const cha = headingPath[headingPath.length - 1];
+        if (!cha || cha.text.toLowerCase() !== headingText.toLowerCase()) headingPath.push({ level, text: headingText });
+        sectionTitle = headingPath.map((h) => h.text).join(HEADING_PATH_SEPARATOR);
+      }
       currentHeadingIndex = headingCounter;
       headingCounter += 1;
       continue;
     }
     if (node.type === 'horizontalRule') {
       flushSection();
+      continue;
+    }
+    if (node.type === 'table') {
+      handleTable(node);
       continue;
     }
     const text = extractNodeText(node);

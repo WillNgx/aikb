@@ -294,8 +294,17 @@ export async function chat(
   // Ảnh CHỈ lấy từ chunk khớp nhất. Đã thử lấy từ mọi chunk được trích dẫn: chunk thứ hai thường là
   // section anh em cùng bài (vd hỏi về phí vẫn kèm ảnh QR của mục nạp tiền) — ảnh sai gây khó chịu
   // hơn ảnh thiếu. tinh-gon: nâng lên nhiều chunk khi model báo được nguồn nó thực sự dùng.
+  //
+  // Ngoại lệ hẹp: chunk khớp nhất KHÔNG có ảnh mà chunk thứ hai CÓ ẢNH và cùng chủ đề (cùng tên mục
+  // cuối, vd cùng "Long Bảo" ở bản bài cũ chưa có ảnh và bản mới có ảnh) thì lấy ảnh của chunk thứ hai.
+  // Không nới theo "cùng bài": đó chính là ca ảnh QR nạp tiền lọt vào câu hỏi về phí.
+  const [first, second] = citedChunks;
+  const imageSource =
+    first && (first.images?.length ?? 0) === 0 && second && (second.images?.length ?? 0) > 0 && sameSectionTopic(first.sectionTitle, second.sectionTitle)
+      ? second
+      : first;
   const images: AnswerImage[] = [];
-  for (const c of citedChunks.slice(0, 1)) {
+  for (const c of imageSource ? [imageSource] : []) {
     for (const img of c.images ?? []) {
       if (images.length < MAX_ANSWER_IMAGES && !images.some((i) => i.src === img.src)) {
         images.push({ ...img, contentId: c.contentId, contentTitle: c.contentTitle });
@@ -324,6 +333,16 @@ export async function chat(
           }
         : undefined,
   };
+}
+
+/**
+ * Hai nhãn section cùng chủ đề khi tên mục CUỐI (sau dấu "›") giống nhau, bỏ phần trong ngoặc và
+ * hoa/thường: "Tỉ lệ thanh toán › Long Bảo (Dragon bonus)" trùng "Long Bảo". Nhãn rỗng thì không trùng.
+ */
+export function sameSectionTopic(a: string | null, b: string | null): boolean {
+  const leaf = (t: string | null) => (t ?? '').split(' › ').pop()!.replace(/\([^)]*\)/g, '').trim().toLowerCase();
+  const la = leaf(a);
+  return la !== '' && la === leaf(b);
 }
 
 // ─── Context Builder ──────────────────────────────────────────────────────────
